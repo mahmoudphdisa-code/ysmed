@@ -46,7 +46,7 @@ function Index() {
   return (
     <>
       <section className="relative flex min-h-screen items-center overflow-hidden pt-16">
-        <img src={hero} alt="" width={1920} height={1088} className="absolute inset-0 h-full w-full object-cover object-right rtl:-scale-x-100" />
+        <img src={hero} alt="" width={1920} height={1088} className="absolute inset-0 h-full w-full object-cover object-right" />
         <div className="bg-hero-fade absolute inset-0 rtl:-scale-x-100" />
         <div className="circuit-grid absolute inset-0" />
         <div className="relative mx-auto w-full max-w-7xl px-6">
