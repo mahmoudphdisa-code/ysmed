@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Bilingual (EN/AR) copy lives in `src/lib/i18n.tsx` (UI strings) and `src/data/*` as `{en, ar}` objects; why: one switcher flips text and `dir` app-wide.
