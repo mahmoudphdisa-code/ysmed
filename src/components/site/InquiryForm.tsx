@@ -29,7 +29,7 @@ export function InquiryForm({ withSector }: { withSector?: boolean }) {
     const { error } = await supabase.from("inquiries").insert({
       user_id: u.user?.id ?? null,
       kind: withSector ? "request" : "contact",
-      sector: withSector ? String(data.sector ?? "") : null,
+      sector: withSector ? String(data["sector"] ?? "") : null,
       name: r.data.name,
       email: r.data.email,
       phone: r.data.phone || null,
