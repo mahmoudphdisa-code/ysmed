@@ -59,7 +59,6 @@ function Index() {
             <div className="animate-rise mt-9 flex flex-wrap gap-3 [animation-delay:0.3s]">
               <Button asChild variant="hero" size="xl"><Link to="/solutions">{t("explore")}</Link></Button>
               <Button asChild variant="gold" size="xl"><Link to="/request">{t("request")}</Link></Button>
-              <Button asChild variant="glass" size="xl"><Link to="/projects">{t("viewProjects")}</Link></Button>
             </div>
           </div>
         </div>
