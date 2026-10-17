@@ -48,7 +48,7 @@ type Inquiry = {
   file_name?: string | null;
 };
 
-export function Page() {
+function Page() {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
 
