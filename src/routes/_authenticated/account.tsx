@@ -16,6 +16,7 @@ import {
   Calendar,
   ExternalLink,
   PlusCircle,
+  FileText,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,8 @@ type Inquiry = {
   created_at: string;
   status?: string;
   photo_url?: string | null;
+  file_url?: string | null;
+  file_name?: string | null;
 };
 
 export function Page() {
@@ -101,7 +104,7 @@ export function Page() {
             .maybeSingle(),
           supabase
             .from("inquiries")
-            .select("id, kind, sector, message, created_at, status, photo_url")
+            .select("id, kind, sector, message, created_at, status, photo_url, file_url, file_name")
             .order("created_at", { ascending: false }),
         ]);
 
@@ -569,7 +572,7 @@ export function Page() {
                         >
                           <img
                             src={i.photo_url}
-                            alt="Attachment"
+                            alt="Attached photo"
                             className="size-14 rounded-lg object-cover border border-border"
                           />
                           <div>
@@ -578,6 +581,30 @@ export function Page() {
                             </span>
                             <p className="text-[11px] text-muted-foreground">
                               {lang === "ar" ? "اضغط للمعاينة الكاملة" : "Click to view image"}
+                            </p>
+                          </div>
+                        </a>
+                      </div>
+                    )}
+
+                    {i.file_url && (
+                      <div className="mt-2.5">
+                        <a
+                          href={i.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          download
+                          className="group inline-flex items-center gap-3 rounded-xl border border-border bg-surface p-2.5 text-xs text-foreground transition-all hover:border-primary hover:bg-surface/80"
+                        >
+                          <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/15 text-gold">
+                            <FileText className="size-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-semibold text-foreground group-hover:text-primary truncate block max-w-xs">
+                              {i.file_name || t("viewFile")} ↗
+                            </span>
+                            <p className="text-[11px] text-muted-foreground">
+                              {t("viewFile")}
                             </p>
                           </div>
                         </a>

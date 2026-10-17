@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type Inquiry = {
   id: string; kind: string; sector: string | null; name: string; email: string;
   phone: string | null; message: string; status: string; created_at: string;
-  photo_url?: string | null;
+  photo_url?: string | null; file_url?: string | null; file_name?: string | null;
 };
 type Profile = { id: string; full_name: string; phone: string; company: string; created_at: string };
 const statuses = ["new", "in_progress", "done"] as const;
@@ -137,12 +137,34 @@ function Page() {
                       >
                         <img
                           src={r.photo_url}
-                          alt="Attached file"
+                          alt="Attached photo"
                           className="size-16 rounded-lg object-cover"
                         />
                         <div>
                           <p className="font-semibold text-foreground group-hover:text-primary">{t("viewPhoto")} ↗</p>
                           <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "اضغط للمعاينة بالحجم الكامل" : "Click to view full size"}</p>
+                        </div>
+                      </a>
+                    </div>
+                  )}
+
+                  {r.file_url && (
+                    <div className="mt-2.5">
+                      <a
+                        href={r.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="group inline-flex items-center gap-3 rounded-xl border border-border bg-surface/80 p-2.5 text-xs text-foreground transition-all hover:border-primary hover:bg-surface"
+                      >
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gold/15 text-gold">
+                          <FileText className="size-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground group-hover:text-primary truncate max-w-xs">
+                            {r.file_name || t("viewFile")} ↗
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">{t("viewFile")}</p>
                         </div>
                       </a>
                     </div>

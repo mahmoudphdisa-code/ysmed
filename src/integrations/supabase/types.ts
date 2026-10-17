@@ -19,6 +19,8 @@ export type Database = {
           company: string | null
           created_at: string
           email: string
+          file_name: string | null
+          file_url: string | null
           id: string
           kind: string
           message: string
@@ -33,6 +35,8 @@ export type Database = {
           company?: string | null
           created_at?: string
           email: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
           kind?: string
           message: string
@@ -47,6 +51,8 @@ export type Database = {
           company?: string | null
           created_at?: string
           email?: string
+          file_name?: string | null
+          file_url?: string | null
           id?: string
           kind?: string
           message?: string
