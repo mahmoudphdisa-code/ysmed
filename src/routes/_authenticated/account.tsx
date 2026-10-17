@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,12 +34,15 @@ function Page() {
   const [profile, setProfile] = useState({ full_name: "", phone: "", company: "" });
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [busy, setBusy] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data } = await supabase.auth.getUser();
       if (!data.user) return;
       setEmail(data.user.email ?? "");
+      const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id).eq("role", "admin").maybeSingle();
+      setIsAdmin(!!role);
       const [{ data: p }, { data: inq }] = await Promise.all([
         supabase.from("profiles").select("full_name, phone, company").eq("id", data.user.id).maybeSingle(),
         supabase.from("inquiries").select("id, kind, sector, message, created_at").order("created_at", { ascending: false }),
@@ -70,6 +73,7 @@ function Page() {
     <>
       <PageHeader title={t("account")} subtitle={`${t("welcomeBack")} — ${email}`} />
       <Section className="grid max-w-4xl gap-10 pt-0">
+        {isAdmin && <Button asChild variant="gold" size="lg"><Link to="/admin">{t("admin")}</Link></Button>}
         <form onSubmit={save} className="glass glow-border grid gap-4 rounded-3xl p-6 sm:grid-cols-2 sm:p-8">
           <input
             value={profile.full_name}
