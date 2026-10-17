@@ -56,13 +56,19 @@ function Page() {
 
   const setStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("inquiries").update({ status }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setRows((r) => r.map((x) => (x.id === id ? { ...x, status } : x)));
   };
   const remove = async (id: string) => {
     if (!confirm(lang === "ar" ? "حذف هذه الرسالة؟" : "Delete this message?")) return;
     const { error } = await supabase.from("inquiries").delete().eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     setRows((r) => r.filter((x) => x.id !== id));
   };
 

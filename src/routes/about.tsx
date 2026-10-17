@@ -27,11 +27,18 @@ function Page() {
     <>
       <PageHeader title={t("about")} subtitle={t("magdy")} />
       <Section className="pt-0">
-        <p className="max-w-3xl text-2xl leading-relaxed">{t("whoText")}</p>
-        <div className="mt-12 grid gap-5 md:grid-cols-3">
-          {values.map((v) => { const [h, p] = v[lang]; return (
-            <div key={h} className="glass rounded-2xl p-6"><v.icon className="size-8 text-gold" /><h3 className="mt-4 text-xl font-semibold">{h}</h3><p className="mt-2 text-muted-foreground">{p}</p></div>
-          ); })}
+        <p className="max-w-3xl text-lg leading-relaxed sm:text-xl lg:text-2xl">{t("whoText")}</p>
+        <div className="mt-8 grid gap-4 sm:mt-12 sm:gap-5 md:grid-cols-3">
+          {values.map((v) => {
+            const [h, p] = v[lang];
+            return (
+              <div key={h} className="glass rounded-2xl p-5 sm:p-6">
+                <v.icon className="size-7 text-gold sm:size-8" />
+                <h3 className="mt-3 text-lg font-semibold sm:mt-4 sm:text-xl">{h}</h3>
+                <p className="mt-2 text-sm text-muted-foreground sm:text-base">{p}</p>
+              </div>
+            );
+          })}
         </div>
       </Section>
     </>

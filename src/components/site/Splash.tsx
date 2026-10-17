@@ -1,31 +1,43 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import logo from "@/assets/ysmed-logo.png";
 import { useI18n } from "@/lib/i18n";
 
+// Module-level: survives React Strict Mode's intentional unmount/remount cycle.
+// Stores when the splash animation started so we can reschedule timers after cleanup.
+let _startedAt: number | null = null;
+
+const FADE_MS = 2200;
+const REMOVE_MS = 2750;
+const FADE_MS_REDUCED = 400;
+const REMOVE_MS_REDUCED = 700;
+
 export function Splash() {
   const { t } = useI18n();
-  // Start hidden — never show on SSR to avoid hydration mismatch
   const [show, setShow] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const done = useRef(false);
 
   useEffect(() => {
-    // Guard: only run once even if component re-mounts (HMR)
-    if (done.current) return;
-    // Already shown this session? Skip.
-    if (sessionStorage.getItem("ysmed-splash")) return;
-
-    done.current = true;
-    sessionStorage.setItem("ysmed-splash", "1");
-
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setShow(true);
+    const fadeMs = reduced ? FADE_MS_REDUCED : FADE_MS;
+    const removeMs = reduced ? REMOVE_MS_REDUCED : REMOVE_MS;
+    const now = Date.now();
 
-    const fadeDelay = reduced ? 400 : 2200;
-    const removeDelay = reduced ? 700 : 2750;
+    if (_startedAt === null) {
+      // First-ever call — check if this session already saw the splash
+      if (sessionStorage.getItem("ysmed-splash")) return;
+      // Mark session + record start time
+      sessionStorage.setItem("ysmed-splash", "1");
+      _startedAt = now;
+      setShow(true);
+    }
+    // _startedAt is set (either fresh or after Strict Mode cleanup/remount):
+    // Reschedule with remaining time so timers survive the cleanup cycle.
+    const elapsed = now - _startedAt;
+    const fadeIn = Math.max(0, fadeMs - elapsed);
+    const removeIn = Math.max(0, removeMs - elapsed);
 
-    const a = setTimeout(() => setLeaving(true), fadeDelay);
-    const b = setTimeout(() => setShow(false), removeDelay);
+    const a = setTimeout(() => setLeaving(true), fadeIn);
+    const b = setTimeout(() => setShow(false), removeIn);
 
     return () => {
       clearTimeout(a);

@@ -32,22 +32,50 @@ function Page() {
   return (
     <>
       <PageHeader title={tl(s.title)} subtitle={tl(s.summary)} />
-      <div className="mx-auto -mt-6 mb-8 max-w-7xl px-6">
+
+      {/* Back button */}
+      <div className="mx-auto -mt-4 mb-6 max-w-7xl px-4 sm:-mt-6 sm:mb-8 sm:px-6">
         <Button asChild variant="glass" size="sm" className="rounded-full">
-          <Link to="/" hash="industries"><ArrowLeft className="rtl:rotate-180" /> {t("backToIndustries")}</Link>
+          <Link to="/" hash="industries">
+            <ArrowLeft className="rtl:rotate-180" /> {t("backToIndustries")}
+          </Link>
         </Button>
       </div>
-      <Section className="grid gap-10 pt-0 lg:grid-cols-2">
+
+      <Section className="grid gap-8 pt-0 sm:gap-10 lg:grid-cols-2">
+        {/* Image / icon */}
         <div className="glass overflow-hidden rounded-3xl">
-          {s.image ? <img src={s.image} alt="" className="h-full w-full object-cover" /> : <div className="circuit-grid flex aspect-[4/3] items-center justify-center"><Icon className="size-28 text-primary" strokeWidth={1} /></div>}
+          {s.image ? (
+            <img
+              src={s.image}
+              alt=""
+              className="h-56 w-full object-cover sm:h-72 lg:h-full"
+            />
+          ) : (
+            <div className="circuit-grid flex aspect-video items-center justify-center lg:aspect-[4/3]">
+              <Icon className="size-20 text-primary sm:size-28" strokeWidth={1} />
+            </div>
+          )}
         </div>
+
+        {/* Feature list */}
         <div>
-          <ul className="grid gap-3">
+          <ul className="grid gap-2.5 sm:gap-3">
             {s.items.map((it, i) => (
-              <li key={i} className="glass flex items-center gap-3 rounded-xl p-4"><CheckCircle2 className="size-5 shrink-0 text-gold" />{tl(it)}</li>
+              <li key={i} className="glass flex items-center gap-3 rounded-xl p-3.5 sm:p-4">
+                <CheckCircle2 className="size-4 shrink-0 text-gold sm:size-5" />
+                <span className="text-sm sm:text-base">{tl(it)}</span>
+              </li>
             ))}
           </ul>
-          <Button asChild variant="gold" size="xl" className="mt-8"><Link to="/request">{t("request")}</Link></Button>
+          <Button
+            asChild
+            variant="gold"
+            size="xl"
+            className="mt-6 w-full sm:mt-8 sm:w-auto"
+          >
+            <Link to="/request">{t("request")}</Link>
+          </Button>
         </div>
       </Section>
     </>

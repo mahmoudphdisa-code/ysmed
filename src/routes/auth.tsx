@@ -21,7 +21,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 const field =
-  "w-full rounded-xl border border-input bg-surface/60 px-4 py-3 text-foreground outline-none focus:border-primary focus:shadow-glow";
+  "w-full rounded-xl border border-input bg-surface/60 px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:shadow-glow sm:text-base";
 
 const signupSchema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -103,7 +103,7 @@ function Page() {
     <>
       <PageHeader title={mode === "login" ? t("login") : t("signup")} subtitle={t("ctaText")} />
       <Section className="max-w-xl pt-0">
-        <form onSubmit={submit} className="glass glow-border grid gap-4 rounded-3xl p-6 sm:p-8">
+        <form onSubmit={submit} className="glass glow-border grid gap-4 rounded-3xl p-5 sm:p-8">
           {mode === "signup" && (
             <>
               <input name="name" required maxLength={100} placeholder={t("name")} className={field} />
