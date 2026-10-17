@@ -14,7 +14,6 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
-import { Route as ProjectsRouteImport } from './routes/projects'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
@@ -44,11 +43,6 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProjectsRoute = ProjectsRouteImport.update({
-  id: '/projects',
-  path: '/projects',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RequestRoute = RequestRouteImport.update({
   id: '/request',
   path: '/request',
@@ -75,7 +69,6 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/projects': typeof ProjectsRoute
   '/request': typeof RequestRoute
   '/account': typeof AuthenticatedAccountRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -86,7 +79,6 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/projects': typeof ProjectsRoute
   '/request': typeof RequestRoute
   '/account': typeof AuthenticatedAccountRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -99,7 +91,6 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
-  '/projects': typeof ProjectsRoute
   '/request': typeof RequestRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -112,7 +103,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/projects'
     | '/request'
     | '/account'
     | '/solutions/$slug'
@@ -123,7 +113,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/projects'
     | '/request'
     | '/account'
     | '/solutions/$slug'
@@ -135,7 +124,6 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
-    | '/projects'
     | '/request'
     | '/_authenticated/account'
     | '/solutions/$slug'
@@ -148,7 +136,6 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
-  ProjectsRoute: typeof ProjectsRoute
   RequestRoute: typeof RequestRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
@@ -189,13 +176,6 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/projects': {
-      id: '/projects'
-      path: '/projects'
-      fullPath: '/projects'
-      preLoaderRoute: typeof ProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request': {
@@ -246,7 +226,6 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
-  ProjectsRoute: ProjectsRoute,
   RequestRoute: RequestRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
