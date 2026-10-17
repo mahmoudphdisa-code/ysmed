@@ -63,6 +63,13 @@ const dict = {
   st_done: { en: "Done", ar: "مكتمل" },
   all: { en: "All", ar: "الكل" },
   notAdmin: { en: "This area is for YSMED administrators only.", ar: "هذه المنطقة مخصصة لإدارة YSMED فقط." },
+  attachPhoto: { en: "Attach a Photo or Diagram (optional)", ar: "إرفاق صورة أو مخطط (اختياري)" },
+  dropPhoto: { en: "Click to select a photo or drag & drop", ar: "اضغط لاختيار صورة أو اسحبها هنا" },
+  photoFormats: { en: "PNG, JPG, WEBP up to 5MB", ar: "PNG أو JPG أو WEBP حتى 5 ميجابايت" },
+  removePhoto: { en: "Remove", ar: "إزالة" },
+  photoTooLarge: { en: "Image is too large (maximum 5MB)", ar: "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)" },
+  uploadingPhoto: { en: "Uploading photo...", ar: "جاري رفع الصورة..." },
+  viewPhoto: { en: "View Attached Photo", ar: "عرض الصورة المرفقة" },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

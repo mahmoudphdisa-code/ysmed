@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type Inquiry = {
   id: string; kind: string; sector: string | null; name: string; email: string;
   phone: string | null; message: string; status: string; created_at: string;
+  photo_url?: string | null;
 };
 type Profile = { id: string; full_name: string; phone: string; company: string; created_at: string };
 const statuses = ["new", "in_progress", "done"] as const;
@@ -126,6 +127,26 @@ function Page() {
                     <a href={`mailto:${r.email}`} className="hover:text-primary">{r.email}</a>{r.phone && <> · <a href={`tel:${r.phone}`} className="hover:text-primary">{r.phone}</a></>}
                   </p>
                   <p className="mt-3 whitespace-pre-wrap text-sm">{r.message}</p>
+                  {r.photo_url && (
+                    <div className="mt-3">
+                      <a
+                        href={r.photo_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group inline-flex items-center gap-3 rounded-xl border border-border bg-surface/80 p-2 text-xs text-primary transition-colors hover:border-primary"
+                      >
+                        <img
+                          src={r.photo_url}
+                          alt="Attached file"
+                          className="size-16 rounded-lg object-cover"
+                        />
+                        <div>
+                          <p className="font-semibold text-foreground group-hover:text-primary">{t("viewPhoto")} ↗</p>
+                          <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "اضغط للمعاينة بالحجم الكامل" : "Click to view full size"}</p>
+                        </div>
+                      </a>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

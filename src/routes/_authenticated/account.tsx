@@ -25,6 +25,7 @@ type Inquiry = {
   sector: string | null;
   message: string;
   created_at: string;
+  photo_url?: string | null;
 };
 
 function Page() {
@@ -56,7 +57,7 @@ function Page() {
           .maybeSingle(),
         supabase
           .from("inquiries")
-          .select("id, kind, sector, message, created_at")
+          .select("id, kind, sector, message, created_at, photo_url")
           .order("created_at", { ascending: false }),
       ]);
       if (p) setProfile({ full_name: p.full_name, phone: p.phone, company: p.company });
@@ -154,7 +155,24 @@ function Page() {
                     )}
                   </span>
                 </div>
-                <p className="mt-3 text-sm text-foreground">{i.message}</p>
+                <p className="mt-3 whitespace-pre-wrap text-sm text-foreground">{i.message}</p>
+                {i.photo_url && (
+                  <div className="mt-3">
+                    <a
+                      href={i.photo_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group inline-flex items-center gap-2 rounded-xl border border-border bg-surface/80 p-2 text-xs text-primary transition-colors hover:border-primary"
+                    >
+                      <img
+                        src={i.photo_url}
+                        alt="Attached file"
+                        className="size-12 rounded-lg object-cover"
+                      />
+                      <span className="font-medium group-hover:underline">{t("viewPhoto")} ↗</span>
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
