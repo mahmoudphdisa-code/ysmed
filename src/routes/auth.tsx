@@ -3,7 +3,6 @@ import { useState, type FormEvent } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
@@ -93,10 +92,13 @@ function Page() {
   };
 
   const social = async (provider: "google") => {
-    const result = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-    if (result.error) toast.error(result.error.message);
+    if (error) toast.error(error.message);
   };
 
   return (
