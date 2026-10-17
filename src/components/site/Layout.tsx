@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
-import { Menu, X, Globe, ChevronRight } from "lucide-react";
+import { useState, useEffect, type ReactNode } from "react";
+import { Menu, X, Globe, ChevronRight, User } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", k: "home" },
@@ -29,6 +30,19 @@ function LangSwitch() {
 export function Navbar() {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasSession(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const close = () => setOpen(false);
 
@@ -58,10 +72,11 @@ export function Navbar() {
         <div className="hidden items-center gap-2 lg:flex">
           <LangSwitch />
           <Link
-            to="/account"
-            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary"
+            to={hasSession ? "/account" : "/auth"}
+            className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary"
           >
-            {t("account")}
+            <User className="size-4" />
+            {hasSession ? t("account") : t("login")}
           </Link>
           <Button asChild variant="hero" size="sm" className="rounded-full px-4">
             <Link to="/request">{t("request")}</Link>
@@ -106,11 +121,12 @@ export function Navbar() {
             <div className="flex items-center justify-between">
               <LangSwitch />
               <Link
-                to="/account"
+                to={hasSession ? "/account" : "/auth"}
                 onClick={close}
-                className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary"
+                className="flex items-center gap-1.5 rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-primary"
               >
-                {t("account")}
+                <User className="size-4" />
+                {hasSession ? t("account") : t("login")}
               </Link>
             </div>
             <Button asChild variant="hero" className="w-full rounded-xl">

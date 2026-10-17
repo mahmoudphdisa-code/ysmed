@@ -70,6 +70,22 @@ const dict = {
   photoTooLarge: { en: "Image is too large (maximum 5MB)", ar: "حجم الصورة كبير جداً (الحد الأقصى 5 ميجابايت)" },
   uploadingPhoto: { en: "Uploading photo...", ar: "جاري رفع الصورة..." },
   viewPhoto: { en: "View Attached Photo", ar: "عرض الصورة المرفقة" },
+  profileTab: { en: "Profile Details", ar: "بيانات الحساب" },
+  securityTab: { en: "Security & Password", ar: "الأمان وكلمة المرور" },
+  requestsTab: { en: "My Requests & Messages", ar: "طلباتي ورسائلي" },
+  changePassword: { en: "Change Password", ar: "تغيير كلمة المرور" },
+  newPassword: { en: "New Password", ar: "كلمة المرور الجديدة" },
+  confirmPassword: { en: "Confirm New Password", ar: "تأكيد كلمة المرور الجديدة" },
+  updatePassword: { en: "Update Password", ar: "تحديث كلمة المرور" },
+  passwordMismatch: { en: "Passwords do not match.", ar: "كلمتا المرور غير متطابقتين." },
+  passwordUpdated: { en: "Your password has been updated successfully.", ar: "تم تحديث كلمة المرور بنجاح." },
+  passwordLength: { en: "Password must be at least 6 characters.", ar: "يجب ألا تقل كلمة المرور عن 6 أحرف." },
+  memberSince: { en: "Member since", ar: "عضو منذ" },
+  verified: { en: "Verified", ar: "مؤكد" },
+  client: { en: "Client Account", ar: "حساب عميل" },
+  administrator: { en: "Administrator", ar: "مدير النظام" },
+  confirmSignOut: { en: "Are you sure you want to sign out?", ar: "هل أنت متأكد من تسجيل الخروج؟" },
+  noRequestsYet: { en: "You haven't submitted any project requests or messages yet.", ar: "لم تقدم أي طلبات مشاريع أو رسائل بعد." },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;
