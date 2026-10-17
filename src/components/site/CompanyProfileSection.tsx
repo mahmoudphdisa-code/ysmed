@@ -113,7 +113,9 @@ export function CompanyProfileSection() {
   };
 
   return (
-    <Section id="company-profile" className="scroll-mt-16">
+    <>
+      <div id="company-profile" className="scroll-mt-16" />
+      <Section>
       {/* ─── Section Header ───────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pb-2">
         <div>
@@ -505,5 +507,6 @@ export function CompanyProfileSection() {
         </DialogContent>
       </Dialog>
     </Section>
+    </>
   );
 }

@@ -178,6 +178,7 @@ const dict = {
   uploadImage: { en: "Upload Image", ar: "رفع صورة" },
   managePortfolio: { en: "Manage Projects", ar: "إدارة سابقة الأعمال" },
   portfolioTab: { en: "Company Profile (Portfolio)", ar: "سابقة الأعمال (المشاريع)" },
+  sector: { en: "Sector", ar: "القطاع" },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

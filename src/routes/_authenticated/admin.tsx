@@ -340,12 +340,12 @@ function Page() {
   );
 
   // Sector helper
-  const getSector = useCallback((slug: string | null) => {
+  const getSector = useCallback((slug: string | null | undefined) => {
     if (!slug) return null;
     return solutions.find((x) => x.slug === slug);
   }, []);
 
-  const sectorName = useCallback((slug: string | null) => {
+  const sectorName = useCallback((slug: string | null | undefined) => {
     const s = getSector(slug);
     return s ? tl(s.title) : null;
   }, [getSector, tl]);
@@ -813,13 +813,13 @@ function Page() {
           title_ar: p.title_ar,
           description_en: p.description_en,
           description_ar: p.description_ar,
-          client_name: p.client_name,
-          sector: p.sector,
+          client_name: p.client_name ?? null,
+          sector: p.sector ?? null,
           image_url: p.image_url,
-          location: p.location,
-          year: p.year,
+          location: p.location ?? null,
+          year: p.year ?? null,
           is_hidden: false,
-          order_index: p.order_index,
+          order_index: p.order_index ?? 0,
         });
       }
       toast.success(lang === "ar" ? "تم استيراد المشاريع النموذجية إلى قاعدة البيانات" : "Sample projects seeded to Supabase!");
