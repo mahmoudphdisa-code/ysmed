@@ -1,24 +1,37 @@
-# YSMED
+# YSMED for Innovative Solutions
 
-Implement exactly the screenshot and nothing else
+Smart Engineering & Energy Solutions — a Magdy Group company.
 
-This project was built with [Lovable](https://lovable.dev).
+## Overview
+YSMED specializes in IoT, AI, industrial automation, renewable energy, and power protection solutions.
 
-## Build with Lovable
+## Features
+- **Bilingual Interface**: Full Arabic and English support with RTL/LTR switching.
+- **Modern Responsive Design**: Optimized for mobile, tablet, and desktop screens.
+- **Authentication**: Email/password and OAuth authentication backed by Supabase.
+- **Inquiry & Request System**: Interactive forms for service requests and contact messages.
+- **Admin Dashboard**: Manage user requests and inquiries.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/1dd73f52-e3eb-4d77-a478-1737046537e9).
+## Tech Stack
+- **Framework**: TanStack Start / React 19
+- **Routing**: TanStack Router
+- **Styling**: Tailwind CSS & Lucide Icons
+- **Database & Auth**: Supabase
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+## Getting Started
 
-## Development
+### Prerequisites
+- Node.js (v18+)
+- npm or bun
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
+### Installation
 ```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
+npm install
+```
+
+### Running Locally
+```sh
 npm run dev
 ```
+
+The application will be available at `http://localhost:8080`.
