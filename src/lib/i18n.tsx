@@ -38,6 +38,21 @@ const dict = {
   phone: { en: "Phone", ar: "الهاتف" },
   message: { en: "Message", ar: "الرسالة" },
   send: { en: "Send", ar: "إرسال" },
+  company: { en: "Company", ar: "الشركة" },
+  password: { en: "Password", ar: "كلمة المرور" },
+  signup: { en: "Create Account", ar: "إنشاء حساب" },
+  haveAccount: { en: "Already have an account? Sign in", ar: "لديك حساب؟ سجّل الدخول" },
+  noAccount: { en: "New here? Create an account", ar: "جديد هنا؟ أنشئ حساباً" },
+  orContinue: { en: "or continue with", ar: "أو تابع عبر" },
+  account: { en: "My Account", ar: "حسابي" },
+  logout: { en: "Sign Out", ar: "تسجيل الخروج" },
+  myInquiries: { en: "My Messages & Requests", ar: "رسائلي وطلباتي" },
+  saveProfile: { en: "Save Details", ar: "حفظ البيانات" },
+  profileSaved: { en: "Your details were saved.", ar: "تم حفظ بياناتك." },
+  inquirySent: { en: "Thank you! Your message was sent. Our team will contact you soon.", ar: "شكراً لك! تم إرسال رسالتك وسيتواصل معك فريقنا قريباً." },
+  checkEmail: { en: "Please check your email to confirm your account.", ar: "يرجى تفقد بريدك الإلكتروني لتأكيد حسابك." },
+  welcomeBack: { en: "Welcome back", ar: "مرحباً بعودتك" },
+  noInquiries: { en: "You haven't sent any messages yet.", ar: "لم ترسل أي رسائل بعد." },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

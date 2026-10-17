@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { solutions } from "@/data/solutions";
+import { supabase } from "@/integrations/supabase/client";
 
 const schema = z.object({
   name: z.string().trim().min(1).max(100),
@@ -17,16 +18,27 @@ const field = "w-full rounded-xl border border-input bg-surface/60 px-4 py-3 tex
 export function InquiryForm({ withSector }: { withSector?: boolean }) {
   const { t, tl, lang } = useI18n();
   const [busy, setBusy] = useState(false);
-  const submit = (e: FormEvent<HTMLFormElement>) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = Object.fromEntries(new FormData(e.currentTarget));
     const r = schema.safeParse(data);
     if (!r.success) { toast.error(lang === "ar" ? "يرجى مراجعة الحقول" : "Please check the highlighted fields"); return; }
     setBusy(true);
-    setTimeout(() => {
-      setBusy(false);
-      toast.info(lang === "ar" ? "الإرسال عبر الإنترنت سيُفعَّل قريباً." : "Online submission is being activated soon.");
-    }, 400);
+    const form = e.currentTarget;
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("inquiries").insert({
+      user_id: u.user?.id ?? null,
+      kind: withSector ? "request" : "contact",
+      sector: withSector ? String(data["sector"] ?? "") : null,
+      name: r.data.name,
+      email: r.data.email,
+      phone: r.data.phone || null,
+      message: r.data.message,
+    });
+    setBusy(false);
+    if (error) { toast.error(error.message); return; }
+    form.reset();
+    toast.success(t("inquirySent"));
   };
   return (
     <form onSubmit={submit} className="glass glow-border grid gap-4 rounded-3xl p-6 sm:grid-cols-2 sm:p-8">
