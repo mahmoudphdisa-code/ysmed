@@ -60,22 +60,30 @@ function Page() {
           toast.error(lang === "ar" ? "يرجى مراجعة الحقول" : "Please check the highlighted fields");
           return;
         }
-        const { error } = await supabase.auth.signUp({
+        const { data: signUpData, error } = await supabase.auth.signUp({
           email: r.data.email,
           password: r.data.password,
           options: {
-            data: { full_name: r.data.name },
+            data: {
+              full_name: r.data.name,
+              phone: r.data.phone || "",
+              company: r.data.company || "",
+            },
             emailRedirectTo: window.location.origin,
           },
         });
         if (error) throw error;
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
+
+        if (signUpData.session) {
           await supabase
             .from("profiles")
-            .update({ phone: r.data.phone ?? "", company: r.data.company ?? "" })
-            .eq("id", sessionData.session.user.id);
-          navigate({ to: "/account" });
+            .upsert({
+              id: signUpData.session.user.id,
+              full_name: r.data.name,
+              phone: r.data.phone || "",
+              company: r.data.company || "",
+            });
+          navigate({ to: "/account", replace: true });
         } else {
           toast.success(t("checkEmail"));
         }
@@ -85,12 +93,28 @@ function Page() {
           toast.error(lang === "ar" ? "يرجى مراجعة الحقول" : "Please check the highlighted fields");
           return;
         }
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: r.data.email,
           password: r.data.password,
         });
         if (error) throw error;
-        navigate({ to: "/account" });
+
+        if (authData.user) {
+          const meta = authData.user.user_metadata || {};
+          const phone = typeof meta["phone"] === "string" ? meta["phone"] : "";
+          const company = typeof meta["company"] === "string" ? meta["company"] : "";
+          if (phone || company) {
+            await supabase
+              .from("profiles")
+              .update({
+                phone,
+                company,
+              })
+              .eq("id", authData.user.id);
+          }
+        }
+
+        navigate({ to: "/account", replace: true });
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

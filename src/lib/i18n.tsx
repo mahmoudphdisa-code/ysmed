@@ -11,7 +11,7 @@ const dict = {
   contact: { en: "Contact Us", ar: "تواصل معنا" },
   request: { en: "Request a Project", ar: "اطلب مشروعاً" },
   login: { en: "Login", ar: "تسجيل الدخول" },
-  heroTitle: { en: "Engineering Smarter Solutions for a Better Future", ar: "نهندس حلولاً أذكى لمستقبل أفضل" },
+  heroTitle: { en: "Engineering Smarter Solutions for a Better Future", ar: "نطور حلولاً أذكى لمستقبل أفضل" },
   heroText: {
     en: "YSMED for Innovative Solutions, a Magdy Group company, delivers integrated smart technologies, engineering automation, intelligent infrastructure, renewable energy systems, and reliable power solutions across diverse industries.",
     ar: "تقدم YSMED للحلول المبتكرة، إحدى شركات مجموعة مجدي، تقنيات ذكية متكاملة وأتمتة هندسية وبنية تحتية ذكية وأنظمة طاقة متجددة وحلول طاقة موثوقة لمختلف القطاعات.",
