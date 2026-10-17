@@ -179,6 +179,33 @@ const dict = {
   managePortfolio: { en: "Manage Projects", ar: "إدارة سابقة الأعمال" },
   portfolioTab: { en: "Company Profile (Portfolio)", ar: "سابقة الأعمال (المشاريع)" },
   sector: { en: "Sector", ar: "القطاع" },
+  contactSubtitle: {
+    en: "Reach out to our engineering consultants. We are ready to assist you with automation, energy, and smart systems.",
+    ar: "تواصل مع مستشارينا ومطورينا الهندسيين. نحن جاهزون لدعمك بأحدث حلول الأتمتة والطاقة والأنظمة الذكية.",
+  },
+  directChannels: { en: "Direct Contact Channels", ar: "قنوات التواصل المباشرة" },
+  callUs: { en: "Call Our Team", ar: "اتصال هاتفي" },
+  chatWhatsApp: { en: "WhatsApp Chat", ar: "محادثة فورية عبر واتساب" },
+  emailUs: { en: "Official Email", ar: "البريد الإلكتروني الرسمي" },
+  followSocial: { en: "Social Media Channels", ar: "صفحاتنا الرسمية" },
+  facebook: { en: "Facebook", ar: "فيسبوك" },
+  instagram: { en: "Instagram", ar: "إنستغرام" },
+  quickScan: { en: "Scan Digital Business Card", ar: "امسح بطاقة التواصل الذكية" },
+  quickScanDesc: {
+    en: "Point your smartphone camera to save our official contact details instantly.",
+    ar: "وجّه كاميرا هاتفك لحفظ بيانات التواصل الرسمية في جهات اتصالك مباشرة.",
+  },
+  workingHours: {
+    en: "Sunday – Thursday: 9:00 AM – 5:00 PM (Cairo Time)",
+    ar: "الأحد – الخميس: 9:00 ص – 5:00 م (بتوقيت القاهرة)",
+  },
+  responseGuarantee: {
+    en: "Guaranteed technical response within 24 business hours.",
+    ar: "نضمن لك الرد الفني والاستشارة خلال 24 ساعة عمل.",
+  },
+  sendMessageOnline: { en: "Send an Online Inquiry", ar: "إرسال رسالة أو استفسار فني" },
+  copyPhone: { en: "Copy Number", ar: "نسخ الرقم" },
+  copyEmail: { en: "Copy Email", ar: "نسخ البريد" },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;
