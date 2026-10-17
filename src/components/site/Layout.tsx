@@ -38,6 +38,7 @@ export function Navbar() {
         </nav>
         <div className="hidden items-center gap-2 lg:flex">
           <LangSwitch />
+          <Link to="/account" className="rounded-full px-3 py-2 text-sm text-muted-foreground hover:text-primary">{t("account")}</Link>
           <Button asChild variant="hero" size="sm" className="rounded-full px-4"><Link to="/request">{t("request")}</Link></Button>
         </div>
         <button className="lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu">{open ? <X /> : <Menu />}</button>
@@ -49,6 +50,7 @@ export function Navbar() {
           ))}
           <div className="mt-3 flex items-center justify-between">
             <LangSwitch />
+            <Link to="/account" onClick={() => setOpen(false)} className="text-sm text-muted-foreground">{t("account")}</Link>
             <Button asChild variant="hero" className="rounded-full"><Link to="/request" onClick={() => setOpen(false)}>{t("request")}</Link></Button>
           </div>
         </div>
