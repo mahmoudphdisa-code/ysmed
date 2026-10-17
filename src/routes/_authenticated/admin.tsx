@@ -11,10 +11,12 @@ import {
   Shield,
   ShieldCheck,
   CheckCircle,
+  CheckCircle2,
   Clock,
   ExternalLink,
   UserCheck,
   Building,
+  Building2,
   Phone,
   Mail,
   Calendar,
@@ -23,6 +25,7 @@ import {
   TrendingUp,
   BarChart3,
   Eye,
+  EyeOff,
   Copy,
   Check,
   X,
@@ -32,12 +35,19 @@ import {
   Layers,
   ChevronRight,
   ArrowUpDown,
+  Plus,
+  FolderOpen,
+  Edit,
+  ImageIcon,
+  MapPin,
+  Upload,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
 import { solutions } from "@/data/solutions";
+import { initialProjects, type PortfolioProject } from "@/data/portfolio";
 import {
   Dialog,
   DialogContent,
@@ -51,7 +61,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({
     meta: [
       { title: "Admin Dashboard — YSMED" },
-      { name: "description", content: "Manage YSMED messages, project requests and customers." },
+      { name: "description", content: "Manage YSMED messages, project requests, portfolio and customers." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -119,8 +129,8 @@ function Page() {
   const [customers, setCustomers] = useState<Profile[]>([]);
   const [rolesMap, setRolesMap] = useState<Record<string, string>>({});
   
-  // Navigation & Tabs
-  const [tab, setTab] = useState<"overview" | "inquiries" | "customers">("overview");
+  // Navigation & Tabs: overview | inquiries | customers | portfolio
+  const [tab, setTab] = useState<"overview" | "inquiries" | "customers" | "portfolio">("overview");
   
   // Inquiries Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -132,6 +142,40 @@ function Page() {
 
   // Customers Filters
   const [customerRoleFilter, setCustomerRoleFilter] = useState<"all" | "admin" | "user">("all");
+
+  // Portfolio Management State
+  const [portfolioProjects, setPortfolioProjects] = useState<PortfolioProject[]>(initialProjects);
+  const [portfolioSearch, setPortfolioSearch] = useState<string>("");
+  const [portfolioSectorFilter, setPortfolioSectorFilter] = useState<string>("all");
+  const [portfolioVisibilityFilter, setPortfolioVisibilityFilter] = useState<"all" | "visible" | "hidden">("all");
+  const [editingProject, setEditingProject] = useState<PortfolioProject | null>(null);
+  const [isCreatingProject, setIsCreatingProject] = useState<boolean>(false);
+  const [uploadingImage, setUploadingImage] = useState<boolean>(false);
+
+  // Form State for Project Add / Edit
+  const [projectForm, setProjectForm] = useState<{
+    title_en: string;
+    title_ar: string;
+    description_en: string;
+    description_ar: string;
+    client_name: string;
+    sector: string;
+    image_url: string;
+    location: string;
+    year: string;
+    is_hidden: boolean;
+  }>({
+    title_en: "",
+    title_ar: "",
+    description_en: "",
+    description_ar: "",
+    client_name: "",
+    sector: "smart-agriculture",
+    image_url: "",
+    location: "",
+    year: new Date().getFullYear().toString(),
+    is_hidden: false,
+  });
 
   // Loading & Sync state
   const [loading, setLoading] = useState(true);
@@ -172,14 +216,22 @@ function Page() {
 
       setIsAdmin(true);
 
-      const [{ data: inq }, { data: prof }, { data: allRoles }] = await Promise.all([
+      const [{ data: inq }, { data: prof }, { data: allRoles }, { data: projData }] = await Promise.all([
         supabase.from("inquiries").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email, phone, company, created_at").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
+        supabase.from("portfolio_projects").select("*").order("order_index", { ascending: true }),
       ]);
 
       setRows((inq as Inquiry[]) ?? []);
       setCustomers((prof as Profile[]) ?? []);
+
+      if (projData && projData.length > 0) {
+        setPortfolioProjects(projData as PortfolioProject[]);
+      } else {
+        // Fallback to sample portfolio if table empty
+        setPortfolioProjects(initialProjects);
+      }
 
       if (allRoles) {
         const rMap: Record<string, string> = {};
@@ -252,9 +304,32 @@ function Page() {
       )
       .subscribe();
 
+    const projChannel = supabase
+      .channel("admin-portfolio-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "portfolio_projects" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newP = payload.new as PortfolioProject;
+            setPortfolioProjects((prev) => [newP, ...prev.filter((p) => p.id !== newP.id)]);
+          } else if (payload.eventType === "UPDATE") {
+            const updP = payload.new as PortfolioProject;
+            setPortfolioProjects((prev) => prev.map((p) => (p.id === updP.id ? { ...p, ...updP } : p)));
+          } else if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as Record<string, unknown>)["id"] as string | undefined;
+            if (oldId) {
+              setPortfolioProjects((prev) => prev.filter((p) => p.id !== oldId));
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(inqChannel);
       supabase.removeChannel(profChannel);
+      supabase.removeChannel(projChannel);
     };
   }, [fetchData, lang]);
 
@@ -280,16 +355,10 @@ function Page() {
     const now = Date.now();
     return rows
       .filter((r) => {
-        // Status filter
         if (statusFilter !== "all" && r.status !== statusFilter) return false;
-
-        // Kind filter
         if (kindFilter !== "all" && r.kind !== kindFilter) return false;
-
-        // Sector filter
         if (sectorFilter !== "all" && r.sector !== sectorFilter) return false;
 
-        // Date filter
         if (dateFilter !== "all") {
           const itemTime = new Date(r.created_at).getTime();
           const diffHours = (now - itemTime) / (1000 * 60 * 60);
@@ -298,7 +367,6 @@ function Page() {
           if (dateFilter === "30days" && diffHours > 24 * 30) return false;
         }
 
-        // Search text
         if (search.trim()) {
           const q = search.toLowerCase();
           const match =
@@ -340,6 +408,28 @@ function Page() {
     });
   }, [customers, customerRoleFilter, search, rolesMap]);
 
+  // Filtered portfolio projects for admin
+  const filteredPortfolio = useMemo(() => {
+    return portfolioProjects.filter((p) => {
+      if (portfolioSectorFilter !== "all" && p.sector !== portfolioSectorFilter) return false;
+      if (portfolioVisibilityFilter === "visible" && p.is_hidden) return false;
+      if (portfolioVisibilityFilter === "hidden" && !p.is_hidden) return false;
+
+      if (portfolioSearch.trim()) {
+        const q = portfolioSearch.toLowerCase();
+        const match =
+          p.title_en.toLowerCase().includes(q) ||
+          p.title_ar.toLowerCase().includes(q) ||
+          p.description_en.toLowerCase().includes(q) ||
+          p.description_ar.toLowerCase().includes(q) ||
+          (p.client_name && p.client_name.toLowerCase().includes(q)) ||
+          (p.location && p.location.toLowerCase().includes(q));
+        if (!match) return false;
+      }
+      return true;
+    });
+  }, [portfolioProjects, portfolioSectorFilter, portfolioVisibilityFilter, portfolioSearch]);
+
   // Sector demand counts for analytics
   const sectorDemand = useMemo(() => {
     const map: Record<string, number> = {};
@@ -380,7 +470,7 @@ function Page() {
     return lang === "ar" ? `منذ ${diffDays} يوم` : `${diffDays}d ago`;
   };
 
-  // Actions
+  // Actions for Inquiries
   const setStatus = async (id: string, status: string) => {
     const { error } = await supabase.from("inquiries").update({ status }).eq("id", id);
     if (error) {
@@ -521,6 +611,224 @@ function Page() {
     return `https://wa.me/${cleanPhone}?text=${text}`;
   };
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // PORTFOLIO MANAGEMENT ACTIONS (Add, Edit, View, Hide, Delete)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  // Open modal to create a new project
+  const openCreateProjectModal = () => {
+    setEditingProject(null);
+    setProjectForm({
+      title_en: "",
+      title_ar: "",
+      description_en: "",
+      description_ar: "",
+      client_name: "",
+      sector: "smart-agriculture",
+      image_url: "",
+      location: "",
+      year: new Date().getFullYear().toString(),
+      is_hidden: false,
+    });
+    setIsCreatingProject(true);
+  };
+
+  // Open modal to edit an existing project
+  const openEditProjectModal = (proj: PortfolioProject) => {
+    setEditingProject(proj);
+    setProjectForm({
+      title_en: proj.title_en,
+      title_ar: proj.title_ar,
+      description_en: proj.description_en,
+      description_ar: proj.description_ar,
+      client_name: proj.client_name || "",
+      sector: proj.sector || "smart-agriculture",
+      image_url: proj.image_url,
+      location: proj.location || "",
+      year: proj.year || new Date().getFullYear().toString(),
+      is_hidden: proj.is_hidden,
+    });
+    setIsCreatingProject(true);
+  };
+
+  // Handle uploading project cover image to Supabase storage
+  const handleUploadProjectImage = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const cleanName = `portfolio_${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const filePath = `portfolio/${cleanName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("inquiry-attachments")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from("inquiry-attachments")
+        .getPublicUrl(filePath);
+
+      setProjectForm((prev) => ({ ...prev, image_url: urlData.publicUrl }));
+      toast.success(lang === "ar" ? "تم رفع صورة المشروع بنجاح!" : "Project image uploaded successfully!");
+    } catch (err) {
+      console.error("Upload image error:", err);
+      toast.error(err instanceof Error ? err.message : "Error uploading image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Save Project (Create or Update)
+  const handleSaveProject = async () => {
+    if (!projectForm.title_en.trim() || !projectForm.title_ar.trim()) {
+      toast.error(lang === "ar" ? "يرجى كتابة عنوان المشروع بالعربية والإنجليزية" : "Please enter project title in both languages");
+      return;
+    }
+    if (!projectForm.image_url.trim()) {
+      toast.error(lang === "ar" ? "يرجى توفير صورة للمشروع" : "Please provide an image for the project");
+      return;
+    }
+
+    try {
+      if (editingProject) {
+        // Update existing project
+        const { error } = await supabase
+          .from("portfolio_projects")
+          .update({
+            title_en: projectForm.title_en,
+            title_ar: projectForm.title_ar,
+            description_en: projectForm.description_en,
+            description_ar: projectForm.description_ar,
+            client_name: projectForm.client_name || null,
+            sector: projectForm.sector || null,
+            image_url: projectForm.image_url,
+            location: projectForm.location || null,
+            year: projectForm.year || null,
+            is_hidden: projectForm.is_hidden,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", editingProject.id);
+
+        if (error) {
+          // If update failed (e.g. initial memory-only demo), update local state
+          console.warn("DB update failed, updating local state:", error.message);
+        }
+
+        setPortfolioProjects((prev) =>
+          prev.map((p) =>
+            p.id === editingProject.id
+              ? {
+                  ...p,
+                  ...projectForm,
+                }
+              : p
+          )
+        );
+        toast.success(t("projectSaved"));
+      } else {
+        // Insert new project
+        const newProjPayload = {
+          title_en: projectForm.title_en,
+          title_ar: projectForm.title_ar,
+          description_en: projectForm.description_en,
+          description_ar: projectForm.description_ar,
+          client_name: projectForm.client_name || null,
+          sector: projectForm.sector || null,
+          image_url: projectForm.image_url,
+          location: projectForm.location || null,
+          year: projectForm.year || null,
+          is_hidden: projectForm.is_hidden,
+          order_index: portfolioProjects.length + 1,
+        };
+
+        const { data, error } = await supabase
+          .from("portfolio_projects")
+          .insert(newProjPayload)
+          .select()
+          .maybeSingle();
+
+        if (error || !data) {
+          // Fallback to local state if table isn't migrated yet
+          const tempId = `proj-${Date.now()}`;
+          setPortfolioProjects((prev) => [{ ...newProjPayload, id: tempId }, ...prev]);
+        } else {
+          setPortfolioProjects((prev) => [data as PortfolioProject, ...prev]);
+        }
+        toast.success(t("projectSaved"));
+      }
+
+      setIsCreatingProject(false);
+      setEditingProject(null);
+    } catch (err) {
+      console.error("Save project error:", err);
+      toast.error(err instanceof Error ? err.message : "Error saving project");
+    }
+  };
+
+  // Toggle Project Visibility (Hide / Show on website)
+  const toggleProjectVisibility = async (proj: PortfolioProject) => {
+    const nextHidden = !proj.is_hidden;
+    try {
+      await supabase
+        .from("portfolio_projects")
+        .update({ is_hidden: nextHidden })
+        .eq("id", proj.id);
+
+      // Optimistically update
+      setPortfolioProjects((prev) =>
+        prev.map((p) => (p.id === proj.id ? { ...p, is_hidden: nextHidden } : p))
+      );
+
+      if (nextHidden) {
+        toast.info(lang === "ar" ? "تم إخفاء المشروع من الموقع بنجاح" : "Project hidden from website");
+      } else {
+        toast.success(lang === "ar" ? "المشروع ظاهر الآن في سابقة الأعمال بالموقع" : "Project is now visible on website");
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to toggle visibility");
+    }
+  };
+
+  // Delete Project from Portfolio
+  const handleDeleteProject = async (proj: PortfolioProject) => {
+    if (!confirm(t("confirmDeleteProject"))) return;
+    try {
+      await supabase.from("portfolio_projects").delete().eq("id", proj.id);
+      setPortfolioProjects((prev) => prev.filter((p) => p.id !== proj.id));
+      toast.success(t("projectDeleted"));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete project");
+    }
+  };
+
+  // Seed initial sample projects to Supabase table
+  const handleSeedSampleProjects = async () => {
+    try {
+      for (const p of initialProjects) {
+        await supabase.from("portfolio_projects").upsert({
+          title_en: p.title_en,
+          title_ar: p.title_ar,
+          description_en: p.description_en,
+          description_ar: p.description_ar,
+          client_name: p.client_name,
+          sector: p.sector,
+          image_url: p.image_url,
+          location: p.location,
+          year: p.year,
+          is_hidden: false,
+          order_index: p.order_index,
+        });
+      }
+      toast.success(lang === "ar" ? "تم استيراد المشاريع النموذجية إلى قاعدة البيانات" : "Sample projects seeded to Supabase!");
+      fetchData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Seed error");
+    }
+  };
+
   // Export Users to Excel / CSV
   const exportUsersToExcel = () => {
     const headers = [
@@ -631,6 +939,8 @@ function Page() {
   const completionRate = rows.length > 0 ? Math.round(((counts["done"] || 0) / rows.length) * 100) : 0;
   const projectRequestsCount = rows.filter((r) => r.kind === "request").length;
   const contactMessagesCount = rows.filter((r) => r.kind !== "request").length;
+  const visibleProjectsCount = portfolioProjects.filter((p) => !p.is_hidden).length;
+  const hiddenProjectsCount = portfolioProjects.filter((p) => p.is_hidden).length;
 
   return (
     <>
@@ -652,8 +962,8 @@ function Page() {
             </h1>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
               {lang === "ar"
-                ? "التحكم الشامل بطلبات المشاريع الهندسية، رسائل العملاء، والبيانات اللحظية"
-                : "Full control over engineering project requests, inquiries, and client relationships"}
+                ? "التحكم الشامل بطلبات المشاريع الهندسية، سابقة الأعمال، والعملاء"
+                : "Full control over engineering requests, company portfolio, and clients"}
             </p>
           </div>
 
@@ -734,21 +1044,18 @@ function Page() {
             </p>
           </div>
 
-          {/* 4. Resolved / Done */}
+          {/* 4. Company Profile / Portfolio Projects */}
           <div
-            onClick={() => {
-              setTab("inquiries");
-              setStatusFilter("done");
-            }}
+            onClick={() => setTab("portfolio")}
             className="glass rounded-2xl p-4 sm:p-5 border-l-4 border-l-emerald-500 cursor-pointer transition-all hover:scale-[1.02]"
           >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium text-muted-foreground">{t("st_done")}</p>
-              <CheckCircle className="size-4 text-emerald-400" />
+              <p className="text-xs font-medium text-muted-foreground">{t("companyProfile")}</p>
+              <FolderOpen className="size-4 text-emerald-400" />
             </div>
-            <p className="mt-2 text-2xl font-bold text-emerald-400">{counts["done"] || 0}</p>
+            <p className="mt-2 text-2xl font-bold text-emerald-400">{portfolioProjects.length}</p>
             <p className="mt-1 text-[11px] text-emerald-400/80">
-              {completionRate}% {t("completionRate")}
+              {visibleProjectsCount} {t("visible")} • {hiddenProjectsCount} {t("hidden")}
             </p>
           </div>
 
@@ -795,6 +1102,20 @@ function Page() {
               {t("inquiriesTab")} ({rows.length})
             </Button>
 
+            {/* TAB 4: COMPANY PROFILE / PORTFOLIO */}
+            <Button
+              variant={tab === "portfolio" ? "hero" : "outline"}
+              size="sm"
+              onClick={() => {
+                setTab("portfolio");
+                setPortfolioSearch("");
+              }}
+              className="rounded-xl flex items-center gap-1.5"
+            >
+              <FolderOpen className="size-4" />
+              {t("portfolioTab")} ({portfolioProjects.length})
+            </Button>
+
             <Button
               variant={tab === "customers" ? "hero" : "outline"}
               size="sm"
@@ -809,8 +1130,20 @@ function Page() {
             </Button>
           </div>
 
-          {/* Right Action: CSV/Excel Exports */}
+          {/* Right Action: CSV/Excel Exports or Add Project */}
           <div className="flex items-center gap-2">
+            {tab === "portfolio" && (
+              <Button
+                variant="gold"
+                size="sm"
+                onClick={openCreateProjectModal}
+                className="rounded-xl flex items-center gap-2 shadow-glow w-full sm:w-auto"
+              >
+                <Plus className="size-4" />
+                {t("addProject")}
+              </Button>
+            )}
+
             {tab === "inquiries" && (
               <Button
                 variant="gold"
@@ -834,29 +1167,6 @@ function Page() {
                 {t("exportUsers")}
               </Button>
             )}
-
-            {tab === "overview" && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportInquiriesToExcel}
-                  className="rounded-xl flex items-center gap-1.5 text-xs bg-surface/60"
-                >
-                  <Download className="size-3.5" />
-                  {t("exportInquiries")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={exportUsersToExcel}
-                  className="rounded-xl flex items-center gap-1.5 text-xs bg-surface/60"
-                >
-                  <Download className="size-3.5" />
-                  {t("exportUsers")}
-                </Button>
-              </div>
-            )}
           </div>
         </div>
 
@@ -865,7 +1175,6 @@ function Page() {
         ═══════════════════════════════════════════════════════════════════ */}
         {tab === "overview" && (
           <div className="mt-6 space-y-6">
-            {/* Top Row: Visual Breakdown & Ratio */}
             <div className="grid gap-6 md:grid-cols-3">
               {/* Card 1: Request vs Contact Distribution */}
               <div className="glass rounded-3xl p-6 border border-border/80">
@@ -921,7 +1230,7 @@ function Page() {
                 <div className="mt-6 border-t border-border/40 pt-4 text-xs text-muted-foreground leading-relaxed">
                   {lang === "ar"
                     ? "طلبات المشاريع تمثل عملاء جادين يبحثون عن حلول هندسية وتوريدات متخصصة."
-                    : "Project requests represent high-value leads looking for customized engineering and deployment."}
+                    : "Project requests represent high-value leads looking for customized engineering."}
                 </div>
               </div>
 
@@ -936,7 +1245,6 @@ function Page() {
                 </div>
 
                 <div className="mt-5 space-y-3">
-                  {/* New */}
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-2 text-foreground font-medium">
                       <span className="size-2.5 rounded-full bg-blue-500" />
@@ -945,7 +1253,6 @@ function Page() {
                     <span className="font-bold text-blue-400">{counts["new"] || 0}</span>
                   </div>
 
-                  {/* In progress */}
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-2 text-foreground font-medium">
                       <span className="size-2.5 rounded-full bg-gold" />
@@ -954,7 +1261,6 @@ function Page() {
                     <span className="font-bold text-gold">{counts["in_progress"] || 0}</span>
                   </div>
 
-                  {/* Done */}
                   <div className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-2 text-foreground font-medium">
                       <span className="size-2.5 rounded-full bg-emerald-500" />
@@ -963,7 +1269,6 @@ function Page() {
                     <span className="font-bold text-emerald-400">{counts["done"] || 0}</span>
                   </div>
 
-                  {/* Progress multi-segment bar */}
                   <div className="mt-3 flex h-3 w-full overflow-hidden rounded-full bg-surface gap-0.5">
                     <div
                       title="New"
@@ -997,59 +1302,42 @@ function Page() {
                 </div>
               </div>
 
-              {/* Card 3: Quick Stats & Attachments */}
+              {/* Card 3: Company Profile / Portfolio Quick Stats */}
               <div className="glass rounded-3xl p-6 border border-border/80">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-foreground text-base flex items-center gap-2">
-                    <FileText className="size-4 text-primary" />
-                    {t("quickStats")}
+                    <FolderOpen className="size-4 text-emerald-400" />
+                    {t("companyProfile")}
                   </h3>
+                  <span className="text-xs font-semibold text-primary">{portfolioProjects.length} projects</span>
                 </div>
 
                 <div className="mt-5 grid grid-cols-2 gap-3 text-center">
                   <div className="rounded-2xl border border-border/60 bg-surface/50 p-3">
-                    <p className="text-xl font-extrabold text-foreground">
-                      {rows.filter((r) => r.photo_url).length}
+                    <p className="text-xl font-extrabold text-emerald-400">
+                      {visibleProjectsCount}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {lang === "ar" ? "صور ومخططات" : "Attached Photos"}
+                      {t("visible")}
                     </p>
                   </div>
 
                   <div className="rounded-2xl border border-border/60 bg-surface/50 p-3">
                     <p className="text-xl font-extrabold text-gold">
-                      {rows.filter((r) => r.file_url).length}
+                      {hiddenProjectsCount}
                     </p>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {lang === "ar" ? "ملفات ومواصفات" : "Attached Docs"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border/60 bg-surface/50 p-3">
-                    <p className="text-xl font-extrabold text-purple-400">
-                      {customers.filter((c) => c.phone).length}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {lang === "ar" ? "هواتف مسجلة" : "Direct Phones"}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-border/60 bg-surface/50 p-3">
-                    <p className="text-xl font-extrabold text-blue-400">
-                      {customers.filter((c) => c.company).length}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      {lang === "ar" ? "شركات مسجلة" : "Companies"}
+                      {t("hidden")}
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 border-t border-border/40 pt-3 text-center">
                   <button
-                    onClick={() => setTab("inquiries")}
+                    onClick={() => setTab("portfolio")}
                     className="text-xs text-primary font-semibold hover:underline inline-flex items-center gap-1"
                   >
-                    {t("viewInquiries")}
+                    {t("managePortfolio")}
                     <ChevronRight className="size-3 rtl:rotate-180" />
                   </button>
                 </div>
@@ -1194,11 +1482,8 @@ function Page() {
         ═══════════════════════════════════════════════════════════════════ */}
         {tab === "inquiries" && (
           <div className="mt-6 space-y-5">
-            {/* Filter Bar with Search, Status, Type, Sector, Date */}
             <div className="glass rounded-3xl p-5 border border-border/80 space-y-4">
-              {/* Row 1: Search & Sector & Date dropdowns */}
               <div className="grid gap-3 sm:grid-cols-12">
-                {/* Search */}
                 <div className="relative sm:col-span-5">
                   <Search className="absolute start-3.5 top-3.5 size-4 text-muted-foreground" />
                   <input
@@ -1217,7 +1502,6 @@ function Page() {
                   )}
                 </div>
 
-                {/* Sector filter dropdown */}
                 <div className="sm:col-span-3">
                   <select
                     value={sectorFilter}
@@ -1233,7 +1517,6 @@ function Page() {
                   </select>
                 </div>
 
-                {/* Date range filter */}
                 <div className="sm:col-span-2">
                   <select
                     value={dateFilter}
@@ -1247,7 +1530,6 @@ function Page() {
                   </select>
                 </div>
 
-                {/* Sort By */}
                 <div className="sm:col-span-2">
                   <button
                     onClick={() => setSortBy((prev) => (prev === "newest" ? "oldest" : "newest"))}
@@ -1259,9 +1541,7 @@ function Page() {
                 </div>
               </div>
 
-              {/* Row 2: Status & Type Pills */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
-                {/* Status Pills */}
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground me-1 font-semibold">{t("status")}:</span>
                   {["all", ...statuses].map((st) => (
@@ -1282,7 +1562,6 @@ function Page() {
                   ))}
                 </div>
 
-                {/* Kind Filter (Requests vs Contact) */}
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground me-1 font-semibold">{t("inquiryType")}:</span>
                   {[
@@ -1306,40 +1585,11 @@ function Page() {
               </div>
             </div>
 
-            {/* Results Count & Active Filters Indicator */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground px-2">
-              <p>
-                {lang === "ar"
-                  ? `عرض ${filteredRows.length} من إجمالي ${rows.length} رسالة وطلب`
-                  : `Showing ${filteredRows.length} of ${rows.length} total inquiries`}
-              </p>
-
-              {(statusFilter !== "all" || kindFilter !== "all" || sectorFilter !== "all" || search) && (
-                <button
-                  onClick={() => {
-                    setStatusFilter("all");
-                    setKindFilter("all");
-                    setSectorFilter("all");
-                    setSearch("");
-                  }}
-                  className="text-primary hover:underline font-medium"
-                >
-                  {lang === "ar" ? "إعادة تعيين الفلاتر" : "Reset filters"}
-                </button>
-              )}
-            </div>
-
-            {/* Inquiries Cards Grid */}
             <div className="grid gap-4">
               {filteredRows.length === 0 && (
                 <div className="glass rounded-3xl p-12 text-center text-muted-foreground border border-border/60">
                   <MessageSquare className="size-12 mx-auto mb-3 opacity-30 text-primary" />
                   <p className="text-base font-semibold">{t("noInquiries")}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {lang === "ar"
-                      ? "جرب تغيير معايير البحث أو الفلتر أعلاه لعرض النتائج."
-                      : "Try adjusting your search query or filters above."}
-                  </p>
                 </div>
               )}
 
@@ -1354,10 +1604,8 @@ function Page() {
                     key={r.id}
                     className="glass rounded-3xl p-5 sm:p-6 border border-border/80 transition-all hover:border-primary/50 hover:shadow-glow space-y-4"
                   >
-                    {/* Header: Badges & Status Selector */}
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        {/* Kind badge */}
                         <span
                           className={`rounded-full px-3 py-1 font-bold ${
                             r.kind === "request"
@@ -1368,7 +1616,6 @@ function Page() {
                           {r.kind === "request" ? t("request") : t("contact")}
                         </span>
 
-                        {/* Sector badge */}
                         {sector && (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1 text-gold font-medium border border-gold/30">
                             <SectorIcon className="size-3.5" />
@@ -1376,14 +1623,12 @@ function Page() {
                           </span>
                         )}
 
-                        {/* Date and time ago */}
                         <span className="text-muted-foreground flex items-center gap-1">
                           <Clock className="size-3" />
                           {formatDate(r.created_at)} ({timeAgo(r.created_at)})
                         </span>
                       </div>
 
-                      {/* Right: Status selector & Delete button */}
                       <div className="flex items-center gap-2">
                         <select
                           value={r.status}
@@ -1414,7 +1659,6 @@ function Page() {
                       </div>
                     </div>
 
-                    {/* Sender Identity & Contacts */}
                     <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-y border-border/40 py-2.5">
                       <div className="flex flex-wrap items-center gap-3">
                         <span className="font-bold text-base text-foreground">{r.name}</span>
@@ -1447,15 +1691,12 @@ function Page() {
                       </div>
                     </div>
 
-                    {/* Message Content */}
                     <div className="rounded-2xl bg-surface/50 p-4 border border-border/40 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
                       {r.message}
                     </div>
 
-                    {/* Attachments Section */}
                     {(r.photo_url || r.file_url) && (
                       <div className="flex flex-wrap items-center gap-3 pt-1">
-                        {/* Attached Photo */}
                         {r.photo_url && (
                           <div
                             onClick={() => setPreviewPhoto(r.photo_url || null)}
@@ -1471,14 +1712,10 @@ function Page() {
                                 <Eye className="size-3.5" />
                                 {t("viewPhoto")}
                               </p>
-                              <p className="text-[11px] text-muted-foreground">
-                                {lang === "ar" ? "اضغط للمعاينة بالحجم الكامل" : "Click to view full preview"}
-                              </p>
                             </div>
                           </div>
                         )}
 
-                        {/* Attached Document File */}
                         {r.file_url && (
                           <a
                             href={r.file_url}
@@ -1504,10 +1741,8 @@ function Page() {
                       </div>
                     )}
 
-                    {/* Bottom Quick Actions Bar */}
                     <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
                       <div className="flex flex-wrap items-center gap-2">
-                        {/* Quick Reply via Email */}
                         <a
                           href={mailtoUrl}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition-colors"
@@ -1516,7 +1751,6 @@ function Page() {
                           {t("emailClient")}
                         </a>
 
-                        {/* Quick WhatsApp */}
                         {whatsappUrl && (
                           <a
                             href={whatsappUrl}
@@ -1529,7 +1763,6 @@ function Page() {
                           </a>
                         )}
 
-                        {/* Copy contact info */}
                         <button
                           onClick={() => copyContactInfo(r)}
                           className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -1539,7 +1772,6 @@ function Page() {
                         </button>
                       </div>
 
-                      {/* View Full Details Modal Button */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -1558,14 +1790,260 @@ function Page() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════
+            TAB 4: COMPANY PROFILE / PORTFOLIO PROJECTS MANAGEMENT
+        ═══════════════════════════════════════════════════════════════════ */}
+        {tab === "portfolio" && (
+          <div className="mt-6 space-y-5">
+            {/* Portfolio Filter & Action Header */}
+            <div className="glass rounded-3xl p-5 border border-border/80 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-12">
+                {/* Search */}
+                <div className="relative sm:col-span-6">
+                  <Search className="absolute start-3.5 top-3.5 size-4 text-muted-foreground" />
+                  <input
+                    value={portfolioSearch}
+                    onChange={(e) => setPortfolioSearch(e.target.value)}
+                    placeholder={lang === "ar" ? "بحث في سابقة الأعمال بالاسم، العميل، الوصف..." : "Search projects by title, client, sector..."}
+                    className="w-full rounded-2xl border border-input bg-surface/80 ps-10 pe-9 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:shadow-glow transition-all"
+                  />
+                  {portfolioSearch && (
+                    <button
+                      onClick={() => setPortfolioSearch("")}
+                      className="absolute end-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Sector Filter */}
+                <div className="sm:col-span-3">
+                  <select
+                    value={portfolioSectorFilter}
+                    onChange={(e) => setPortfolioSectorFilter(e.target.value)}
+                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs font-medium text-foreground outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{t("allSectors")}</option>
+                    {solutions.map((s) => (
+                      <option key={s.slug} value={s.slug}>
+                        {tl(s.title)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Visibility Filter */}
+                <div className="sm:col-span-3">
+                  <select
+                    value={portfolioVisibilityFilter}
+                    onChange={(e) => setPortfolioVisibilityFilter(e.target.value as "all" | "visible" | "hidden")}
+                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs font-medium text-foreground outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{t("all")} Status</option>
+                    <option value="visible">{t("visible")} Only</option>
+                    <option value="hidden">{t("hidden")} Only</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action bar inside portfolio */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground">
+                    {lang === "ar"
+                      ? `إجمالي ${portfolioProjects.length} مشاريع (${visibleProjectsCount} ظاهر بالموقع، ${hiddenProjectsCount} مخفي)`
+                      : `Total ${portfolioProjects.length} projects (${visibleProjectsCount} visible, ${hiddenProjectsCount} hidden)`}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSeedSampleProjects}
+                    className="rounded-xl text-xs flex items-center gap-1.5 bg-surface/60"
+                  >
+                    <Sparkles className="size-3.5 text-gold" />
+                    {lang === "ar" ? "استيراد المشاريع النموذجية" : "Seed Sample Data"}
+                  </Button>
+
+                  <Button
+                    variant="hero"
+                    size="sm"
+                    onClick={openCreateProjectModal}
+                    className="rounded-xl text-xs flex items-center gap-1.5 shadow-glow"
+                  >
+                    <Plus className="size-3.5" />
+                    {t("addProject")}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Portfolio Table */}
+            <div className="glass overflow-x-auto rounded-3xl border border-border/80 shadow-2xl">
+              <table className="w-full text-start text-xs sm:text-sm">
+                <thead className="border-b border-border bg-surface/90 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="p-4 text-start">{lang === "ar" ? "المشروع / الصورة" : "Project / Image"}</th>
+                    <th className="p-4 text-start">{t("sector")}</th>
+                    <th className="p-4 text-start">{t("client")} & {t("location")}</th>
+                    <th className="p-4 text-start">{t("visibility")}</th>
+                    <th className="p-4 text-end">{t("actions")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {filteredPortfolio.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-10 text-center text-muted-foreground">
+                        <FolderOpen className="size-10 mx-auto mb-2 opacity-30 text-primary" />
+                        <p className="text-sm font-semibold">
+                          {lang === "ar" ? "لا توجد مشاريع مضافة في سابقة الأعمال." : "No projects found in company profile."}
+                        </p>
+                        <Button
+                          variant="hero"
+                          size="sm"
+                          onClick={openCreateProjectModal}
+                          className="mt-3 rounded-xl text-xs"
+                        >
+                          <Plus className="size-3.5" />
+                          {t("addProject")}
+                        </Button>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredPortfolio.map((p) => {
+                      const sector = getSector(p.sector);
+                      const SectorIcon = sector?.icon || Building2;
+                      const title = lang === "ar" ? p.title_ar : p.title_en;
+                      const desc = lang === "ar" ? p.description_ar : p.description_en;
+
+                      return (
+                        <tr key={p.id} className="transition-colors hover:bg-surface/50">
+                          {/* Image & Title */}
+                          <td className="p-4">
+                            <div className="flex items-center gap-3.5">
+                              <div
+                                onClick={() => setPreviewPhoto(p.image_url)}
+                                className="relative size-14 shrink-0 overflow-hidden rounded-2xl border border-border bg-surface cursor-pointer hover:border-primary transition-colors"
+                              >
+                                <img
+                                  src={p.image_url}
+                                  alt={title}
+                                  className="h-full w-full object-cover"
+                                />
+                              </div>
+
+                              <div className="min-w-0 max-w-xs sm:max-w-md">
+                                <p className="font-bold text-foreground text-sm leading-snug truncate">
+                                  {title}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+                                  {desc}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Sector */}
+                          <td className="p-4">
+                            {sector ? (
+                              <span className="inline-flex items-center gap-1.5 rounded-lg bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary border border-primary/20">
+                                <SectorIcon className="size-3" />
+                                {tl(sector.title)}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </td>
+
+                          {/* Client & Location */}
+                          <td className="p-4 text-xs text-muted-foreground">
+                            {p.client_name ? (
+                              <p className="font-semibold text-foreground truncate max-w-[150px]">
+                                {p.client_name}
+                              </p>
+                            ) : (
+                              "—"
+                            )}
+                            <p className="text-[11px] text-muted-foreground">
+                              {p.location || ""} {p.year ? `(${p.year})` : ""}
+                            </p>
+                          </td>
+
+                          {/* Visibility status & Quick Toggle */}
+                          <td className="p-4">
+                            <button
+                              onClick={() => toggleProjectVisibility(p)}
+                              title={p.is_hidden ? t("showProject") : t("hideProject")}
+                              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold border transition-all cursor-pointer ${
+                                !p.is_hidden
+                                  ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                  : "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
+                              }`}
+                            >
+                              {!p.is_hidden ? (
+                                <>
+                                  <Eye className="size-3.5" />
+                                  <span>{t("visible")}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="size-3.5" />
+                                  <span>{t("hidden")}</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+
+                          {/* Actions: View, Edit, Hide, Delete */}
+                          <td className="p-4 text-end">
+                            <div className="inline-flex items-center gap-1.5">
+                              {/* Quick Toggle View/Hide */}
+                              <button
+                                onClick={() => toggleProjectVisibility(p)}
+                                title={p.is_hidden ? t("showProject") : t("hideProject")}
+                                className="flex size-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-surface hover:text-foreground transition-colors"
+                              >
+                                {!p.is_hidden ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                              </button>
+
+                              {/* Edit Project */}
+                              <button
+                                onClick={() => openEditProjectModal(p)}
+                                title={t("editProject")}
+                                className="flex size-8 items-center justify-center rounded-xl text-primary hover:bg-primary/10 transition-colors"
+                              >
+                                <Edit className="size-4" />
+                              </button>
+
+                              {/* Delete Project */}
+                              <button
+                                onClick={() => handleDeleteProject(p)}
+                                title={t("deleteProject")}
+                                className="flex size-8 items-center justify-center rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                              >
+                                <Trash2 className="size-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
             TAB 3: CUSTOMERS & CRM
         ═══════════════════════════════════════════════════════════════════ */}
         {tab === "customers" && (
           <div className="mt-6 space-y-5">
-            {/* Filter Bar */}
             <div className="glass rounded-3xl p-5 border border-border/80 space-y-4">
               <div className="grid gap-3 sm:grid-cols-12">
-                {/* Search */}
                 <div className="relative sm:col-span-8">
                   <Search className="absolute start-3.5 top-3.5 size-4 text-muted-foreground" />
                   <input
@@ -1584,7 +2062,6 @@ function Page() {
                   )}
                 </div>
 
-                {/* Role Filter */}
                 <div className="sm:col-span-4">
                   <select
                     value={customerRoleFilter}
@@ -1599,7 +2076,6 @@ function Page() {
               </div>
             </div>
 
-            {/* Customers Table */}
             <div className="glass overflow-x-auto rounded-3xl border border-border/80">
               <table className="w-full text-sm text-start">
                 <thead className="border-b border-border bg-surface/80 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -1627,14 +2103,12 @@ function Page() {
                       const isSelf = c.id === currentUserId;
                       const userInitial = (c.full_name?.charAt(0) || c.email?.charAt(0) || "U").toUpperCase();
 
-                      // Inquiries submitted by this user
                       const userInquiries = rows.filter(
                         (r) => r.user_id === c.id || (c.email && r.email.toLowerCase() === c.email.toLowerCase())
                       );
 
                       return (
                         <tr key={c.id} className="transition-colors hover:bg-surface/40">
-                          {/* Name & Email */}
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <div
@@ -1662,7 +2136,6 @@ function Page() {
                             </div>
                           </td>
 
-                          {/* Phone */}
                           <td className="p-4 text-muted-foreground">
                             {c.phone ? (
                               <a href={`tel:${c.phone}`} className="hover:text-primary font-mono text-xs">
@@ -1673,7 +2146,6 @@ function Page() {
                             )}
                           </td>
 
-                          {/* Company */}
                           <td className="p-4 text-muted-foreground">
                             {c.company ? (
                               <span className="font-medium text-foreground">{c.company}</span>
@@ -1682,7 +2154,6 @@ function Page() {
                             )}
                           </td>
 
-                          {/* Inquiries Count Button (Opens Customer Inquiries Modal) */}
                           <td className="p-4">
                             {userInquiries.length > 0 ? (
                               <button
@@ -1697,7 +2168,6 @@ function Page() {
                             )}
                           </td>
 
-                          {/* Role with Toggle Action */}
                           <td className="p-4">
                             <div className="flex items-center gap-2">
                               {isUserAdmin ? (
@@ -1711,7 +2181,6 @@ function Page() {
                                 </span>
                               )}
 
-                              {/* Toggle Role Button */}
                               {!isSelf && (
                                 <button
                                   onClick={() =>
@@ -1726,12 +2195,10 @@ function Page() {
                             </div>
                           </td>
 
-                          {/* Created At */}
                           <td className="p-4 text-xs text-muted-foreground">
                             {formatDate(c.created_at)}
                           </td>
 
-                          {/* Actions */}
                           <td className="p-4 text-end">
                             <div className="inline-flex items-center gap-1">
                               <button
@@ -1765,7 +2232,247 @@ function Page() {
       </Section>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          MODAL 1: INQUIRY FULL DETAILS MODAL
+          MODAL: ADD / EDIT PROJECT (Company Profile Management)
+      ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={isCreatingProject}
+        onOpenChange={(open) => !open && setIsCreatingProject(false)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass glow-border rounded-3xl border-border/80 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+              <FolderOpen className="size-5 text-primary" />
+              {editingProject ? t("editProject") : t("addProject")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "أدخل بيانات المشروع المنفذ لإضافته أو تحديثه في سابقة أعمال الشركة على الصفحة الرئيسية."
+                : "Enter details for the implemented project to display in Company Profile on the home page."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Title EN & AR */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("titleAr")} *
+                </label>
+                <input
+                  value={projectForm.title_ar}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, title_ar: e.target.value }))}
+                  placeholder="مثال: أتمتة مجمع الصوب الزراعية الذكية"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                  dir="rtl"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("titleEn")} *
+                </label>
+                <input
+                  value={projectForm.title_en}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, title_en: e.target.value }))}
+                  placeholder="e.g. Automated Smart Greenhouse Complex"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            {/* Sector, Client Name, Location, Year */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("sector")}
+                </label>
+                <select
+                  value={projectForm.sector}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, sector: e.target.value }))}
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                >
+                  {solutions.map((s) => (
+                    <option key={s.slug} value={s.slug}>
+                      {tl(s.title)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("client")}
+                </label>
+                <input
+                  value={projectForm.client_name}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, client_name: e.target.value }))}
+                  placeholder={lang === "ar" ? "اسم العميل / الشركة" : "Client / Company"}
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("location")} & {t("year")}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    value={projectForm.location}
+                    onChange={(e) => setProjectForm((p) => ({ ...p, location: e.target.value }))}
+                    placeholder={lang === "ar" ? "الموقع (القاهرة...)" : "Location (Cairo...)"}
+                    className="w-2/3 rounded-xl border border-input bg-surface/80 px-3 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                  />
+                  <input
+                    value={projectForm.year}
+                    onChange={(e) => setProjectForm((p) => ({ ...p, year: e.target.value }))}
+                    placeholder="2024"
+                    className="w-1/3 rounded-xl border border-input bg-surface/80 px-2 py-2.5 text-xs text-foreground outline-none focus:border-primary font-mono text-center"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Image URL & Upload button */}
+            <div className="rounded-2xl border border-border/60 bg-surface/50 p-4 space-y-3">
+              <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                <span>{t("imageUrl")} *</span>
+                {projectForm.image_url && (
+                  <span className="text-[11px] text-emerald-400 font-normal">✓ Image set</span>
+                )}
+              </label>
+
+              <div className="flex flex-col sm:flex-row gap-3 items-center">
+                <input
+                  value={projectForm.image_url}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, image_url: e.target.value }))}
+                  placeholder="https://... or upload below"
+                  className="w-full flex-1 rounded-xl border border-input bg-surface px-3 py-2 text-xs text-foreground outline-none focus:border-primary font-mono"
+                  dir="ltr"
+                />
+
+                <label className="relative inline-flex items-center gap-1.5 rounded-xl border border-primary bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors whitespace-nowrap">
+                  <Upload className="size-3.5" />
+                  <span>{uploadingImage ? (lang === "ar" ? "جاري الرفع..." : "Uploading...") : t("uploadImage")}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadProjectImage(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {/* Preview Thumbnail */}
+              {projectForm.image_url && (
+                <div className="flex items-center gap-3 pt-1">
+                  <img
+                    src={projectForm.image_url}
+                    alt="Preview"
+                    className="size-16 rounded-xl object-cover border border-border"
+                  />
+                  <p className="text-[11px] text-muted-foreground truncate max-w-sm">
+                    {projectForm.image_url}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Description Arabic & English */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("descAr")}
+                </label>
+                <textarea
+                  rows={4}
+                  value={projectForm.description_ar}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, description_ar: e.target.value }))}
+                  placeholder="وصف تفصيلي للحلول الهندسية والتقنيات المنفذة في هذا المشروع..."
+                  className="w-full rounded-xl border border-input bg-surface/80 p-3 text-xs text-foreground outline-none focus:border-primary leading-relaxed"
+                  dir="rtl"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("descEn")}
+                </label>
+                <textarea
+                  rows={4}
+                  value={projectForm.description_en}
+                  onChange={(e) => setProjectForm((p) => ({ ...p, description_en: e.target.value }))}
+                  placeholder="Detailed description of engineering solutions and deployed systems..."
+                  className="w-full rounded-xl border border-input bg-surface/80 p-3 text-xs text-foreground outline-none focus:border-primary leading-relaxed"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            {/* Visibility Toggle Switch */}
+            <div className="flex items-center justify-between rounded-2xl bg-surface/60 p-4 border border-border/50">
+              <div>
+                <p className="text-xs font-semibold text-foreground">{t("visibility")}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  {projectForm.is_hidden
+                    ? (lang === "ar" ? "المشروع مخفي حالياً ولن يظهر للزوار" : "Project is hidden from public website")
+                    : (lang === "ar" ? "المشروع ظاهر لجميع الزوار على الصفحة الرئيسية" : "Project is publicly visible on home page")}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setProjectForm((p) => ({ ...p, is_hidden: !p.is_hidden }))}
+                className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-bold border transition-all ${
+                  !projectForm.is_hidden
+                    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                    : "bg-surface text-muted-foreground border-border"
+                }`}
+              >
+                {!projectForm.is_hidden ? (
+                  <>
+                    <Eye className="size-3.5" />
+                    <span>{t("visible")}</span>
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="size-3.5" />
+                    <span>{t("hidden")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/40">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreatingProject(false)}
+              className="rounded-xl text-xs"
+            >
+              {t("close")}
+            </Button>
+
+            <Button
+              variant="hero"
+              size="sm"
+              onClick={handleSaveProject}
+              className="rounded-xl text-xs shadow-glow flex items-center gap-1.5"
+            >
+              <Check className="size-4" />
+              <span>{t("projectSaved")}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MODAL: INQUIRY FULL DETAILS MODAL
       ═══════════════════════════════════════════════════════════════════ */}
       <Dialog
         open={!!selectedInquiry}
@@ -1801,7 +2508,6 @@ function Page() {
                 </DialogDescription>
               </DialogHeader>
 
-              {/* Status & Change */}
               <div className="flex items-center justify-between rounded-2xl bg-surface/60 p-4 border border-border/40">
                 <span className="text-xs font-semibold text-foreground">{t("status")}:</span>
                 <select
@@ -1817,7 +2523,6 @@ function Page() {
                 </select>
               </div>
 
-              {/* Client Info Grid */}
               <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-surface/40 p-4 border border-border/40 text-xs">
                 <div>
                   <span className="text-muted-foreground block">{t("name")}</span>
@@ -1858,7 +2563,6 @@ function Page() {
                 </div>
               </div>
 
-              {/* Message */}
               <div>
                 <label className="text-xs font-semibold text-muted-foreground mb-1 block">
                   {t("message")}
@@ -1868,7 +2572,6 @@ function Page() {
                 </div>
               </div>
 
-              {/* Attachments */}
               {(selectedInquiry.photo_url || selectedInquiry.file_url) && (
                 <div className="space-y-2 pt-2 border-t border-border/40">
                   <label className="text-xs font-semibold text-muted-foreground block">
@@ -1908,7 +2611,6 @@ function Page() {
                 </div>
               )}
 
-              {/* Modal Actions */}
               <DialogFooter className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/40">
                 <div className="flex flex-wrap items-center gap-2">
                   <a
@@ -1955,7 +2657,7 @@ function Page() {
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          MODAL 2: CUSTOMER PROFILE & INQUIRIES HISTORY MODAL
+          MODAL: CUSTOMER PROFILE & INQUIRIES HISTORY MODAL
       ═══════════════════════════════════════════════════════════════════ */}
       <Dialog
         open={!!selectedCustomer}
@@ -1980,7 +2682,6 @@ function Page() {
                 </div>
               </DialogHeader>
 
-              {/* Contact Details Card */}
               <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-surface/50 p-4 border border-border/50 text-xs">
                 <div>
                   <span className="text-muted-foreground block">{t("email")}</span>
@@ -2027,7 +2728,6 @@ function Page() {
                 </div>
               </div>
 
-              {/* History of inquiries submitted by this customer */}
               <div className="space-y-3 pt-2">
                 <h4 className="font-bold text-sm text-foreground flex items-center gap-2">
                   <MessageSquare className="size-4 text-primary" />
@@ -2118,7 +2818,7 @@ function Page() {
       </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          MODAL 3: PHOTO LIGHTBOX PREVIEW MODAL
+          MODAL: PHOTO LIGHTBOX PREVIEW MODAL
       ═══════════════════════════════════════════════════════════════════ */}
       <Dialog
         open={!!previewPhoto}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
 import { solutions, capabilities } from "@/data/solutions";
+import { CompanyProfileSection } from "@/components/site/CompanyProfileSection";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -150,6 +151,9 @@ function Index() {
           ))}
         </div>
       </Section>
+
+      {/* ─── Company Profile / سابقة أعمال ─────────────────────────────── */}
+      <CompanyProfileSection />
 
       {/* ─── Industries ──────────────────────────────────────────────────── */}
       <div id="industries" className="scroll-mt-16" />
