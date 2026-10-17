@@ -56,16 +56,37 @@ export function Navbar() {
 
         {/* Desktop nav */}
         <nav className="hidden items-center gap-1 lg:flex">
-          {nav.map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              activeOptions={{ exact: n.to === "/" }}
-              className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
-            >
-              {t(n.k)}
-            </Link>
-          ))}
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+          >
+            {t("home")}
+          </Link>
+          <Link
+            to="/solutions"
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+          >
+            {t("solutions")}
+          </Link>
+          <a
+            href="/#company-profile"
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {t("companyProfile")}
+          </a>
+          <Link
+            to="/about"
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+          >
+            {t("about")}
+          </Link>
+          <Link
+            to="/contact"
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+          >
+            {t("contact")}
+          </Link>
         </nav>
 
         {/* Desktop actions */}
@@ -114,6 +135,14 @@ export function Navbar() {
                 <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
               </Link>
             ))}
+            <a
+              href="/#company-profile"
+              onClick={close}
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors last:border-0 hover:text-primary"
+            >
+              <span>{t("companyProfile")}</span>
+              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+            </a>
           </nav>
 
           {/* Bottom actions */}
