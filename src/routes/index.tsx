@@ -152,9 +152,6 @@ function Index() {
         </div>
       </Section>
 
-      {/* ─── Company Profile / سابقة أعمال ─────────────────────────────── */}
-      <CompanyProfileSection />
-
       {/* ─── Industries ──────────────────────────────────────────────────── */}
       <div id="industries" className="scroll-mt-16" />
       <Section>
@@ -165,6 +162,9 @@ function Index() {
           ))}
         </div>
       </Section>
+
+      {/* ─── Company Profile / سابقة أعمال ─────────────────────────────── */}
+      <CompanyProfileSection />
 
       {/* ─── CTA Banner ──────────────────────────────────────────────────── */}
       <Section>
