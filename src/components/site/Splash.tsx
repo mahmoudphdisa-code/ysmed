@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import logo from "@/assets/ysmed-logo.png.asset.json";
+import logo from "@/assets/ysmed-logo.png";
 import { useI18n } from "@/lib/i18n";
 
 export function Splash() {
@@ -24,7 +24,7 @@ export function Splash() {
     <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${leaving ? "opacity-0" : "opacity-100"}`}>
       <div className="circuit-grid absolute inset-0" />
       <div className="relative overflow-hidden rounded-2xl p-4">
-        <img src={logo.url} alt="YSMED" className="animate-rise animate-pulse-glow h-auto w-56 sm:w-72" />
+        <img src={logo} alt="YSMED" className="animate-rise animate-pulse-glow h-auto w-56 sm:w-72" />
         <span className="animate-sweep pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-gold/40 to-transparent" />
       </div>
       <p className="animate-rise relative mt-6 font-display text-xl font-semibold [animation-delay:0.9s]">YSMED for Innovative Solutions</p>

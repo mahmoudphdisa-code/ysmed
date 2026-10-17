@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Cpu } from "lucide-react";
 import hero from "@/assets/hero.jpg";
-import logo from "@/assets/ysmed-logo.png.asset.json";
+import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
@@ -51,7 +51,7 @@ function Index() {
         <div className="circuit-grid absolute inset-0" />
         <div className="relative mx-auto w-full max-w-7xl px-6">
           <div className="max-w-2xl">
-            <img src={logo.url} alt="YSMED" className="animate-rise animate-pulse-glow mb-8 h-24 w-auto" />
+            <img src={logo} alt="YSMED" className="animate-rise animate-pulse-glow mb-8 h-24 w-auto" />
             <h1 className="animate-rise text-4xl font-bold leading-tight sm:text-6xl [animation-delay:0.1s]">
               <span className="text-gradient">{t("heroTitle")}</span>
             </h1>
