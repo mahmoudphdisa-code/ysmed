@@ -216,26 +216,94 @@ function Page() {
 
       setIsAdmin(true);
 
-      const [{ data: inq }, { data: prof }, { data: allRoles }, { data: projData }] = await Promise.all([
+      const [inqRes, profRes, rolesRes, projRes] = await Promise.all([
         supabase.from("inquiries").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email, phone, company, created_at").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("portfolio_projects").select("*").order("order_index", { ascending: true }),
       ]);
 
-      setRows((inq as Inquiry[]) ?? []);
-      setCustomers((prof as Profile[]) ?? []);
+      if (inqRes.error) console.error("Inquiries fetch error:", inqRes.error);
+      if (rolesRes.error) console.warn("User roles fetch error:", rolesRes.error);
+      if (projRes.error) console.warn("Portfolio projects fetch error:", projRes.error);
 
-      if (projData && projData.length > 0) {
-        setPortfolioProjects(projData as PortfolioProject[]);
+      // Handle profiles fetch with fallback if 'email' column does not exist yet in public.profiles table
+      let loadedProfiles: Profile[] = [];
+      if (profRes.error) {
+        console.warn("Profiles query with 'email' failed (PGRST204). Retrying without 'email' column...", profRes.error.message);
+        const fallbackRes = await supabase
+          .from("profiles")
+          .select("id, full_name, phone, company, created_at")
+          .order("created_at", { ascending: false });
+
+        if (fallbackRes.data) {
+          loadedProfiles = (fallbackRes.data as unknown) as Profile[];
+        } else if (fallbackRes.error) {
+          console.error("Profiles fallback fetch error:", fallbackRes.error);
+        }
+      } else if (profRes.data) {
+        loadedProfiles = profRes.data as Profile[];
+      }
+
+      const rawInquiries = (inqRes.data as Inquiry[]) ?? [];
+      setRows(rawInquiries);
+
+      // Build inquiry contact map by user_id to enrich any profiles that might lack email/phone/company
+      const inqUserMap = new Map<string, { email?: string; phone?: string; company?: string; name?: string }>();
+      rawInquiries.forEach((item) => {
+        if (item.user_id) {
+          const existing = inqUserMap.get(item.user_id);
+          if (!existing) {
+            inqUserMap.set(item.user_id, {
+              email: item.email,
+              phone: item.phone || undefined,
+              company: item.company || undefined,
+              name: item.name,
+            });
+          }
+        }
+      });
+
+      // Enrich loaded profiles with emails and phone numbers from inquiries
+      const existingUserIds = new Set(loadedProfiles.map((p) => p.id));
+      const enrichedProfiles: Profile[] = loadedProfiles.map((p) => {
+        const matched = inqUserMap.get(p.id);
+        return {
+          ...p,
+          email: p.email || matched?.email || "",
+          phone: p.phone || matched?.phone || "",
+          company: p.company || matched?.company || "",
+          full_name: p.full_name || matched?.name || "",
+        };
+      });
+
+      // Also include distinct inquiry client accounts that have a user_id not yet in profiles table
+      rawInquiries.forEach((item) => {
+        if (item.user_id && !existingUserIds.has(item.user_id)) {
+          existingUserIds.add(item.user_id);
+          enrichedProfiles.push({
+            id: item.user_id,
+            full_name: item.name || "Client",
+            email: item.email || "",
+            phone: item.phone || "",
+            company: item.company || "",
+            created_at: item.created_at,
+          });
+        }
+      });
+
+      setCustomers(enrichedProfiles);
+
+      if (projRes.data && projRes.data.length > 0) {
+        setPortfolioProjects(projRes.data as PortfolioProject[]);
       } else {
         // Fallback to sample portfolio if table empty
         setPortfolioProjects(initialProjects);
       }
 
-      if (allRoles) {
+      if (rolesRes.data) {
         const rMap: Record<string, string> = {};
-        allRoles.forEach((r) => {
+        rolesRes.data.forEach((r) => {
           rMap[r.user_id] = r.role;
         });
         setRolesMap(rMap);
@@ -838,27 +906,34 @@ function Page() {
       lang === "ar" ? "الهاتف" : "Phone",
       lang === "ar" ? "الشركة" : "Company",
       lang === "ar" ? "الصلاحية" : "Role",
+      lang === "ar" ? "عدد الطلبات والرسائل" : "Inquiries Count",
       lang === "ar" ? "تاريخ التسجيل" : "Registration Date",
     ];
 
-    const data = filteredCustomers.map((c) => [
-      c.id,
-      c.full_name || "",
-      c.email || "",
-      c.phone || "",
-      c.company || "",
-      rolesMap[c.id] === "admin"
-        ? lang === "ar"
-          ? "مسؤول"
-          : "Admin"
-        : lang === "ar"
-        ? "عميل"
-        : "Client",
-      new Date(c.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US"),
-    ]);
+    const data = filteredCustomers.map((c) => {
+      const userInquiries = rows.filter(
+        (r) => r.user_id === c.id || (c.email && r.email && r.email.toLowerCase() === c.email.toLowerCase())
+      );
+      return [
+        c.id,
+        c.full_name || "",
+        c.email || "",
+        c.phone || "",
+        c.company || "",
+        rolesMap[c.id] === "admin"
+          ? lang === "ar"
+            ? "مسؤول"
+            : "Admin"
+          : lang === "ar"
+          ? "عميل"
+          : "Client",
+        userInquiries.length,
+        new Date(c.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US"),
+      ];
+    });
 
-    exportToCsv(`ysmed_users_${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
-    toast.success(lang === "ar" ? "تم تصدير ملف Excel بنجاح" : "Excel file exported successfully");
+    exportToCsv(`ysmed_customers_${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
+    toast.success(lang === "ar" ? "تم تصدير قائمة العملاء إلى ملف Excel بنجاح" : "Customers exported to Excel successfully");
   };
 
   // Export Inquiries to Excel / CSV
@@ -2092,9 +2167,29 @@ function Page() {
                 <tbody className="divide-y divide-border/50">
                   {filteredCustomers.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-10 text-center text-muted-foreground">
-                        <Users className="size-8 mx-auto mb-2 opacity-30" />
-                        <p>{t("noUsersFound")}</p>
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        <Users className="size-10 mx-auto mb-3 opacity-30 text-primary" />
+                        <p className="text-sm font-semibold text-foreground">
+                          {search.trim() || customerRoleFilter !== "all"
+                            ? (lang === "ar" ? "لا توجد نتائج مطابقة لمعايير البحث." : "No accounts match your filter criteria.")
+                            : t("noUsersFound")}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto leading-relaxed">
+                          {lang === "ar"
+                            ? "إذا كان هناك حسابات مسجلة في قاعدة البيانات ولم تظهر، يرجى تشغيل ملف الترحيل 0004_fix_customers_profiles.sql في Supabase SQL Editor لمزامنة البريد وتفعيل صلاحيات المسؤول."
+                            : "If accounts exist in Supabase auth but aren't showing, please run migration 0004_fix_customers_profiles.sql in Supabase SQL Editor to sync emails and enable admin RLS policies."}
+                        </p>
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fetchData()}
+                            className="rounded-xl text-xs flex items-center gap-1.5"
+                          >
+                            <RefreshCw className="size-3.5" />
+                            {t("refresh")}
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -2104,7 +2199,7 @@ function Page() {
                       const userInitial = (c.full_name?.charAt(0) || c.email?.charAt(0) || "U").toUpperCase();
 
                       const userInquiries = rows.filter(
-                        (r) => r.user_id === c.id || (c.email && r.email.toLowerCase() === c.email.toLowerCase())
+                        (r) => r.user_id === c.id || (c.email && r.email && r.email.toLowerCase() === c.email.toLowerCase())
                       );
 
                       return (
@@ -2129,8 +2224,17 @@ function Page() {
                                     </span>
                                   )}
                                 </p>
-                                {c.email && (
-                                  <p className="text-xs text-muted-foreground truncate">{c.email}</p>
+                                {c.email ? (
+                                  <a
+                                    href={`mailto:${c.email}`}
+                                    className="text-xs text-primary hover:underline truncate block max-w-xs"
+                                  >
+                                    {c.email}
+                                  </a>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/60 italic block">
+                                    {lang === "ar" ? "بدون بريد إلكتروني" : "No email linked"}
+                                  </span>
                                 )}
                               </div>
                             </div>

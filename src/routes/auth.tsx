@@ -75,14 +75,23 @@ function Page() {
         if (error) throw error;
 
         if (signUpData.session) {
-          await supabase
-            .from("profiles")
-            .upsert({
+          const profilePayload = {
+            id: signUpData.session.user.id,
+            full_name: r.data.name,
+            phone: r.data.phone || "",
+            company: r.data.company || "",
+            email: r.data.email,
+          };
+          const { error: profErr } = await supabase.from("profiles").upsert(profilePayload);
+          if (profErr) {
+            // Fallback without email column if table schema hasn't been migrated yet
+            await supabase.from("profiles").upsert({
               id: signUpData.session.user.id,
               full_name: r.data.name,
               phone: r.data.phone || "",
               company: r.data.company || "",
             });
+          }
           navigate({ to: "/account", replace: true });
         } else {
           toast.success(t("checkEmail"));
