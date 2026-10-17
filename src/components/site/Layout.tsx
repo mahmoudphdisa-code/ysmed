@@ -8,7 +8,6 @@ import { useI18n } from "@/lib/i18n";
 const nav = [
   { to: "/", k: "home" },
   { to: "/solutions", k: "solutions" },
-  { to: "/projects", k: "projects" },
   { to: "/about", k: "about" },
   { to: "/contact", k: "contact" },
 ] as const;

@@ -53,6 +53,16 @@ const dict = {
   checkEmail: { en: "Please check your email to confirm your account.", ar: "يرجى تفقد بريدك الإلكتروني لتأكيد حسابك." },
   welcomeBack: { en: "Welcome back", ar: "مرحباً بعودتك" },
   noInquiries: { en: "You haven't sent any messages yet.", ar: "لم ترسل أي رسائل بعد." },
+  backToIndustries: { en: "Back to Industries & Solutions", ar: "العودة إلى القطاعات والحلول" },
+  admin: { en: "Admin Dashboard", ar: "لوحة الإدارة" },
+  allInquiries: { en: "All Messages & Requests", ar: "كل الرسائل والطلبات" },
+  customers: { en: "Customers", ar: "العملاء" },
+  status: { en: "Status", ar: "الحالة" },
+  st_new: { en: "New", ar: "جديد" },
+  st_in_progress: { en: "In progress", ar: "قيد المتابعة" },
+  st_done: { en: "Done", ar: "مكتمل" },
+  all: { en: "All", ar: "الكل" },
+  notAdmin: { en: "This area is for YSMED administrators only.", ar: "هذه المنطقة مخصصة لإدارة YSMED فقط." },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

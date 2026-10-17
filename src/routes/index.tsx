@@ -59,7 +59,6 @@ function Index() {
             <div className="animate-rise mt-9 flex flex-wrap gap-3 [animation-delay:0.3s]">
               <Button asChild variant="hero" size="xl"><Link to="/solutions">{t("explore")}</Link></Button>
               <Button asChild variant="gold" size="xl"><Link to="/request">{t("request")}</Link></Button>
-              <Button asChild variant="glass" size="xl"><Link to="/projects">{t("viewProjects")}</Link></Button>
             </div>
           </div>
         </div>
@@ -92,6 +91,7 @@ function Index() {
         </div>
       </Section>
 
+      <div id="industries" className="scroll-mt-16" />
       <Section>
         <h2 className="text-3xl font-bold sm:text-4xl">{t("industries")}</h2>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

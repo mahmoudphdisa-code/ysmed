@@ -92,7 +92,7 @@ function Page() {
     }
   };
 
-  const social = async (provider: "google" | "lovable") => {
+  const social = async (provider: "google") => {
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
     });
@@ -136,14 +136,9 @@ function Page() {
             {t("orContinue")}
             <span className="h-px flex-1 bg-border" />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Button type="button" variant="outline" onClick={() => social("google")}>
-              Google
-            </Button>
-            <Button type="button" variant="outline" onClick={() => social("lovable")}>
-              Lovable
-            </Button>
-          </div>
+          <Button type="button" variant="outline" onClick={() => social("google")}>
+            Google
+          </Button>
         </form>
       </Section>
     </>

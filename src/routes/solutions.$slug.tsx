@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
@@ -32,6 +32,11 @@ function Page() {
   return (
     <>
       <PageHeader title={tl(s.title)} subtitle={tl(s.summary)} />
+      <div className="mx-auto -mt-6 mb-8 max-w-7xl px-6">
+        <Button asChild variant="glass" size="sm" className="rounded-full">
+          <Link to="/" hash="industries"><ArrowLeft className="rtl:rotate-180" /> {t("backToIndustries")}</Link>
+        </Button>
+      </div>
       <Section className="grid gap-10 pt-0 lg:grid-cols-2">
         <div className="glass overflow-hidden rounded-3xl">
           {s.image ? <img src={s.image} alt="" className="h-full w-full object-cover" /> : <div className="circuit-grid flex aspect-[4/3] items-center justify-center"><Icon className="size-28 text-primary" strokeWidth={1} /></div>}
