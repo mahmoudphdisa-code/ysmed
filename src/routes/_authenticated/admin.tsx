@@ -249,15 +249,18 @@ function Page() {
       setRows(rawInquiries);
 
       // Build inquiry contact map by user_id to enrich any profiles that might lack email/phone/company
-      const inqUserMap = new Map<string, { email?: string; phone?: string; company?: string; name?: string }>();
+      const inqUserMap = new Map<
+        string,
+        { email?: string | undefined; phone?: string | undefined; company?: string | undefined; name?: string | undefined }
+      >();
       rawInquiries.forEach((item) => {
         if (item.user_id) {
           const existing = inqUserMap.get(item.user_id);
           if (!existing) {
             inqUserMap.set(item.user_id, {
               email: item.email,
-              phone: item.phone || undefined,
-              company: item.company || undefined,
+              phone: item.phone ?? undefined,
+              company: item.company ?? undefined,
               name: item.name,
             });
           }
