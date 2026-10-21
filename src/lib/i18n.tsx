@@ -207,6 +207,14 @@ const dict = {
   sendMessageOnline: { en: "Send an Online Inquiry", ar: "إرسال رسالة أو استفسار فني" },
   copyPhone: { en: "Copy Number", ar: "نسخ الرقم" },
   copyEmail: { en: "Copy Email", ar: "نسخ البريد" },
+  smartStoreTab: { en: "Smart Store & Products", ar: "الأجهزة والأسعار الذكية" },
+  addProduct: { en: "Add Smart Product", ar: "إضافة جهاز ذكي" },
+  editProduct: { en: "Edit Smart Product", ar: "تعديل الجهاز والأسعار" },
+  priceEgp: { en: "Price (EGP)", ar: "السعر (ج.م)" },
+  originalPriceEgp: { en: "Original Price (Before Discount)", ar: "السعر الأصلي (قبل الخصم)" },
+  stockStatus: { en: "Stock Status", ar: "حالة التوفر بالمخزن" },
+  inStock: { en: "In Stock", ar: "متوفر بالمخزن" },
+  outOfStock: { en: "Out of Stock", ar: "غير متوفر" },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

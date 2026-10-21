@@ -164,6 +164,99 @@ export type Database = {
         }
         Relationships: []
       }
+      smart_products: {
+        Row: {
+          available_colors: unknown
+          available_gangs: unknown
+          base_price_egp: number
+          category: string
+          category_name_ar: string
+          category_name_en: string
+          created_at: string
+          description_ar: string
+          description_en: string
+          features_ar: unknown
+          features_en: unknown
+          id: string
+          images: unknown
+          in_stock: boolean
+          is_deal: boolean
+          is_hidden: boolean
+          is_popular: boolean
+          order_index: number
+          original_price_egp: number | null
+          protocol: string
+          rating: number
+          reviews_count: number
+          slug: string
+          specs: unknown
+          title_ar: string
+          title_en: string
+          updated_at: string
+          variants: unknown
+        }
+        Insert: {
+          available_colors?: unknown
+          available_gangs?: unknown
+          base_price_egp: number
+          category: string
+          category_name_ar: string
+          category_name_en: string
+          created_at?: string
+          description_ar: string
+          description_en: string
+          features_ar?: unknown
+          features_en?: unknown
+          id?: string
+          images?: unknown
+          in_stock?: boolean
+          is_deal?: boolean
+          is_hidden?: boolean
+          is_popular?: boolean
+          order_index?: number
+          original_price_egp?: number | null
+          protocol: string
+          rating?: number
+          reviews_count?: number
+          slug: string
+          specs?: unknown
+          title_ar: string
+          title_en: string
+          updated_at?: string
+          variants?: unknown
+        }
+        Update: {
+          available_colors?: unknown
+          available_gangs?: unknown
+          base_price_egp?: number
+          category?: string
+          category_name_ar?: string
+          category_name_en?: string
+          created_at?: string
+          description_ar?: string
+          description_en?: string
+          features_ar?: unknown
+          features_en?: unknown
+          id?: string
+          images?: unknown
+          in_stock?: boolean
+          is_deal?: boolean
+          is_hidden?: boolean
+          is_popular?: boolean
+          order_index?: number
+          original_price_egp?: number | null
+          protocol?: string
+          rating?: number
+          reviews_count?: number
+          slug?: string
+          specs?: unknown
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
+          variants?: unknown
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

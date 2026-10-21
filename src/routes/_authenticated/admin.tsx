@@ -41,6 +41,10 @@ import {
   ImageIcon,
   MapPin,
   Upload,
+  ShoppingBag,
+  Tag,
+  Package,
+  ToggleLeft,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -48,6 +52,7 @@ import { PageHeader, Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
 import { solutions } from "@/data/solutions";
 import { initialProjects, type PortfolioProject } from "@/data/portfolio";
+import { smartProducts as initialSmartProducts, type SmartProduct, type Protocol, smartCategories } from "@/data/smartHomesData";
 import {
   Dialog,
   DialogContent,
@@ -121,6 +126,53 @@ function exportToCsv(filename: string, headers: string[], rows: (string | number
   URL.revokeObjectURL(url);
 }
 
+function mapDbRowToSmartProduct(row: any): SmartProduct {
+  const specsRaw = (typeof row.specs === "object" && row.specs !== null ? row.specs : {}) as Record<string, unknown>;
+  const featuresEn = Array.isArray(row.features_en) ? (row.features_en as string[]) : [];
+  const featuresAr = Array.isArray(row.features_ar) ? (row.features_ar as string[]) : [];
+  const imagesArr = Array.isArray(row.images) ? (row.images as string[]) : [];
+  const colorsArr = Array.isArray(row.available_colors) ? (row.available_colors as any[]) : undefined;
+  const gangsArr = Array.isArray(row.available_gangs) ? (row.available_gangs as any[]) : undefined;
+  const variantsArr = Array.isArray(row.variants) && row.variants.length > 0 ? (row.variants as any[]) : undefined;
+
+  const maxFeatLen = Math.max(featuresEn.length, featuresAr.length);
+  const features = Array.from({ length: maxFeatLen }).map((_, idx) => ({
+    en: featuresEn[idx] || featuresAr[idx] || "",
+    ar: featuresAr[idx] || featuresEn[idx] || "",
+  }));
+
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: { en: row.title_en, ar: row.title_ar },
+    category: row.category,
+    categoryName: { en: row.category_name_en, ar: row.category_name_ar },
+    description: { en: row.description_en, ar: row.description_ar },
+    features: features.length > 0 ? features : [{ en: "Standard certified smart device", ar: "جهاز ذكي معتمد" }],
+    specs: {
+      protocol: (row.protocol as Protocol) || "Wi-Fi",
+      voltage: (specsRaw.voltage as string) || "100V–240V AC",
+      neutralWireRequired: specsRaw.neutralWireRequired !== undefined ? (specsRaw.neutralWireRequired as boolean | string) : "Flexible",
+      voiceCompatibility: Array.isArray(specsRaw.voiceCompatibility) ? (specsRaw.voiceCompatibility as string[]) : ["Alexa", "Google Assistant"],
+      appControl: (specsRaw.appControl as string) || "Smart Life / Tuya",
+      dimensions: specsRaw.dimensions as string | undefined,
+      maxLoad: specsRaw.maxLoad as string | undefined,
+    },
+    basePriceEGP: row.base_price_egp,
+    originalPriceEGP: row.original_price_egp || undefined,
+    images: imagesArr.length > 0 ? imagesArr : ["https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"],
+    protocol: (row.protocol as Protocol) || "Wi-Fi",
+    inStock: row.in_stock,
+    isPopular: row.is_popular,
+    isDeal: row.is_deal,
+    rating: Number(row.rating) || 4.9,
+    reviewsCount: row.reviews_count || 15,
+    availableColors: colorsArr,
+    availableGangs: gangsArr,
+    variants: variantsArr,
+  };
+}
+
 function Page() {
   const { t, tl, lang } = useI18n();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -129,8 +181,8 @@ function Page() {
   const [customers, setCustomers] = useState<Profile[]>([]);
   const [rolesMap, setRolesMap] = useState<Record<string, string>>({});
   
-  // Navigation & Tabs: overview | inquiries | customers | portfolio
-  const [tab, setTab] = useState<"overview" | "inquiries" | "customers" | "portfolio">("overview");
+  // Navigation & Tabs: overview | inquiries | customers | portfolio | smart-store
+  const [tab, setTab] = useState<"overview" | "inquiries" | "customers" | "portfolio" | "smart-store">("overview");
   
   // Inquiries Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -177,6 +229,55 @@ function Page() {
     is_hidden: false,
   });
 
+  // Smart Store & Products State
+  const [smartProductsList, setSmartProductsList] = useState<SmartProduct[]>(initialSmartProducts);
+  const [smartSearch, setSmartSearch] = useState<string>("");
+  const [smartCategoryFilter, setSmartCategoryFilter] = useState<string>("all");
+  const [smartProtocolFilter, setSmartProtocolFilter] = useState<string>("all");
+  const [smartStockFilter, setSmartStockFilter] = useState<"all" | "in_stock" | "out_of_stock">("all");
+  const [editingSmartProduct, setEditingSmartProduct] = useState<SmartProduct | null>(null);
+  const [isCreatingSmartProduct, setIsCreatingSmartProduct] = useState<boolean>(false);
+  const [uploadingProductImage, setUploadingProductImage] = useState<boolean>(false);
+  const [quickPriceEditingId, setQuickPriceEditingId] = useState<string | null>(null);
+  const [quickPriceValue, setQuickPriceValue] = useState<number>(0);
+
+  // Form State for Product Add / Edit
+  const [smartProductForm, setSmartProductForm] = useState<{
+    slug: string;
+    title_en: string;
+    title_ar: string;
+    category: string;
+    category_name_en: string;
+    category_name_ar: string;
+    description_en: string;
+    description_ar: string;
+    base_price_egp: number;
+    original_price_egp: number | undefined;
+    protocol: Protocol;
+    image_url: string;
+    in_stock: boolean;
+    is_popular: boolean;
+    is_deal: boolean;
+    is_hidden: boolean;
+  }>({
+    slug: "",
+    title_en: "",
+    title_ar: "",
+    category: "switches",
+    category_name_en: "Smart Wall Switches",
+    category_name_ar: "مفاتيح الحائط الذكية",
+    description_en: "",
+    description_ar: "",
+    base_price_egp: 990,
+    original_price_egp: undefined,
+    protocol: "Wi-Fi",
+    image_url: "",
+    in_stock: true,
+    is_popular: false,
+    is_deal: false,
+    is_hidden: false,
+  });
+
   // Loading & Sync state
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -216,16 +317,18 @@ function Page() {
 
       setIsAdmin(true);
 
-      const [inqRes, profRes, rolesRes, projRes] = await Promise.all([
+      const [inqRes, profRes, rolesRes, projRes, smartRes] = await Promise.all([
         supabase.from("inquiries").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email, phone, company, created_at").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("portfolio_projects").select("*").order("order_index", { ascending: true }),
+        supabase.from("smart_products").select("*").order("order_index", { ascending: true }),
       ]);
 
       if (inqRes.error) console.error("Inquiries fetch error:", inqRes.error);
       if (rolesRes.error) console.warn("User roles fetch error:", rolesRes.error);
       if (projRes.error) console.warn("Portfolio projects fetch error:", projRes.error);
+      if (smartRes?.error) console.warn("Smart products fetch error:", smartRes.error);
 
       // Handle profiles fetch with fallback if 'email' column does not exist yet in public.profiles table
       let loadedProfiles: Profile[] = [];
@@ -302,6 +405,12 @@ function Page() {
       } else {
         // Fallback to sample portfolio if table empty
         setPortfolioProjects(initialProjects);
+      }
+
+      if (smartRes?.data && smartRes.data.length > 0) {
+        setSmartProductsList(smartRes.data.map(mapDbRowToSmartProduct));
+      } else {
+        setSmartProductsList(initialSmartProducts);
       }
 
       if (rolesRes.data) {
@@ -397,10 +506,33 @@ function Page() {
       )
       .subscribe();
 
+    const smartChannel = supabase
+      .channel("admin-smart-products-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "smart_products" },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newP = mapDbRowToSmartProduct(payload.new);
+            setSmartProductsList((prev) => [newP, ...prev.filter((p) => p.id !== newP.id)]);
+          } else if (payload.eventType === "UPDATE") {
+            const updP = mapDbRowToSmartProduct(payload.new);
+            setSmartProductsList((prev) => prev.map((p) => (p.id === updP.id ? { ...p, ...updP } : p)));
+          } else if (payload.eventType === "DELETE") {
+            const oldId = (payload.old as Record<string, unknown>)["id"] as string | undefined;
+            if (oldId) {
+              setSmartProductsList((prev) => prev.filter((p) => p.id !== oldId));
+            }
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(inqChannel);
       supabase.removeChannel(profChannel);
       supabase.removeChannel(projChannel);
+      supabase.removeChannel(smartChannel);
     };
   }, [fetchData, lang]);
 
@@ -500,6 +632,25 @@ function Page() {
       return true;
     });
   }, [portfolioProjects, portfolioSectorFilter, portfolioVisibilityFilter, portfolioSearch]);
+
+  // Filtered smart products for admin
+  const filteredSmartProducts = useMemo(() => {
+    return smartProductsList.filter((p) => {
+      if (smartCategoryFilter !== "all" && p.category !== smartCategoryFilter) return false;
+      if (smartProtocolFilter !== "all" && p.protocol !== smartProtocolFilter) return false;
+      if (smartStockFilter === "in_stock" && !p.inStock) return false;
+      if (smartStockFilter === "out_of_stock" && p.inStock) return false;
+
+      if (smartSearch.trim()) {
+        const q = smartSearch.toLowerCase();
+        const matchTitle = p.title.en.toLowerCase().includes(q) || p.title.ar.toLowerCase().includes(q);
+        const matchCategory = p.categoryName.en.toLowerCase().includes(q) || p.categoryName.ar.toLowerCase().includes(q);
+        const matchSlug = p.slug.toLowerCase().includes(q);
+        if (!matchTitle && !matchCategory && !matchSlug) return false;
+      }
+      return true;
+    });
+  }, [smartProductsList, smartCategoryFilter, smartProtocolFilter, smartStockFilter, smartSearch]);
 
   // Sector demand counts for analytics
   const sectorDemand = useMemo(() => {
@@ -900,6 +1051,255 @@ function Page() {
     }
   };
 
+  // ─── SMART STORE & PRODUCTS HANDLERS ───────────────────────────────────────
+
+  const openCreateSmartProductModal = () => {
+    setEditingSmartProduct(null);
+    setSmartProductForm({
+      slug: `ysmed-device-${Date.now().toString(36)}`,
+      title_en: "",
+      title_ar: "",
+      category: "switches",
+      category_name_en: "Smart Wall Switches",
+      category_name_ar: "مفاتيح الحائط الذكية",
+      description_en: "",
+      description_ar: "",
+      base_price_egp: 990,
+      original_price_egp: undefined,
+      protocol: "Wi-Fi",
+      image_url: "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80",
+      in_stock: true,
+      is_popular: false,
+      is_deal: false,
+      is_hidden: false,
+    });
+    setIsCreatingSmartProduct(true);
+  };
+
+  const openEditSmartProductModal = (prod: SmartProduct) => {
+    setEditingSmartProduct(prod);
+    setSmartProductForm({
+      slug: prod.slug,
+      title_en: prod.title.en,
+      title_ar: prod.title.ar,
+      category: prod.category,
+      category_name_en: prod.categoryName.en,
+      category_name_ar: prod.categoryName.ar,
+      description_en: prod.description.en,
+      description_ar: prod.description.ar,
+      base_price_egp: prod.basePriceEGP,
+      original_price_egp: prod.originalPriceEGP,
+      protocol: prod.protocol,
+      image_url: prod.images[0] || "",
+      in_stock: prod.inStock,
+      is_popular: Boolean(prod.isPopular),
+      is_deal: Boolean(prod.isDeal),
+      is_hidden: false,
+    });
+    setIsCreatingSmartProduct(true);
+  };
+
+  const handleUploadProductImage = async (file: File) => {
+    setUploadingProductImage(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const cleanName = `prod_${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+      const filePath = `products/${cleanName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("inquiry-attachments")
+        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("inquiry-attachments")
+        .getPublicUrl(filePath);
+
+      setSmartProductForm((prev) => ({ ...prev, image_url: urlData.publicUrl }));
+      toast.success(lang === "ar" ? "تم رفع صورة الجهاز بنجاح!" : "Product image uploaded successfully!");
+    } catch (err) {
+      console.error("Upload image error:", err);
+      toast.error(err instanceof Error ? err.message : "Error uploading image");
+    } finally {
+      setUploadingProductImage(false);
+    }
+  };
+
+  const handleSaveSmartProduct = async () => {
+    if (!smartProductForm.title_en.trim() || !smartProductForm.title_ar.trim()) {
+      toast.error(lang === "ar" ? "يرجى كتابة اسم الجهاز بالعربية والإنجليزية" : "Please enter product title in both languages");
+      return;
+    }
+    if (!smartProductForm.base_price_egp || smartProductForm.base_price_egp <= 0) {
+      toast.error(lang === "ar" ? "يرجى تحديد سعر بيع صحيح بالجنيه المصري" : "Please enter a valid price in EGP");
+      return;
+    }
+
+    try {
+      const payload = {
+        slug: smartProductForm.slug || `ysmed-device-${Date.now().toString(36)}`,
+        title_en: smartProductForm.title_en,
+        title_ar: smartProductForm.title_ar,
+        category: smartProductForm.category,
+        category_name_en: smartProductForm.category_name_en,
+        category_name_ar: smartProductForm.category_name_ar,
+        description_en: smartProductForm.description_en,
+        description_ar: smartProductForm.description_ar,
+        base_price_egp: Math.round(Number(smartProductForm.base_price_egp)),
+        original_price_egp: smartProductForm.original_price_egp ? Math.round(Number(smartProductForm.original_price_egp)) : null,
+        protocol: smartProductForm.protocol,
+        images: [smartProductForm.image_url || "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"],
+        in_stock: smartProductForm.in_stock,
+        is_popular: smartProductForm.is_popular,
+        is_deal: smartProductForm.is_deal,
+        is_hidden: smartProductForm.is_hidden,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (editingSmartProduct) {
+        const { error } = await supabase
+          .from("smart_products")
+          .update(payload)
+          .eq("id", editingSmartProduct.id);
+
+        if (error) {
+          console.warn("DB update failed, updating local state:", error.message);
+        }
+
+        setSmartProductsList((prev) =>
+          prev.map((p) =>
+            p.id === editingSmartProduct.id
+              ? {
+                  ...p,
+                  slug: payload.slug,
+                  title: { en: payload.title_en, ar: payload.title_ar },
+                  category: payload.category,
+                  categoryName: { en: payload.category_name_en, ar: payload.category_name_ar },
+                  description: { en: payload.description_en, ar: payload.description_ar },
+                  basePriceEGP: payload.base_price_egp,
+                  originalPriceEGP: payload.original_price_egp ?? undefined,
+                  protocol: payload.protocol,
+                  images: payload.images,
+                  inStock: payload.in_stock,
+                  isPopular: payload.is_popular,
+                  isDeal: payload.is_deal,
+                }
+              : p
+          )
+        );
+        toast.success(lang === "ar" ? "تم تحديث الجهاز وسعره بنجاح!" : "Product & price updated successfully!");
+      } else {
+        const newInsert = {
+          ...payload,
+          order_index: smartProductsList.length + 1,
+        };
+
+        const { data, error } = await supabase
+          .from("smart_products")
+          .insert(newInsert)
+          .select()
+          .maybeSingle();
+
+        if (error || !data) {
+          const tempId = `prod-${Date.now()}`;
+          const newProd: SmartProduct = {
+            id: tempId,
+            slug: payload.slug,
+            title: { en: payload.title_en, ar: payload.title_ar },
+            category: payload.category,
+            categoryName: { en: payload.category_name_en, ar: payload.category_name_ar },
+            description: { en: payload.description_en, ar: payload.description_ar },
+            features: [{ en: "Certified Smart Living Hardware", ar: "جهاز معتمد لحلول المنازل الذكية" }],
+            specs: {
+              protocol: payload.protocol,
+              voltage: "100V–240V AC",
+              neutralWireRequired: "Flexible",
+              voiceCompatibility: ["Alexa", "Google Assistant"],
+              appControl: "Smart Life / Tuya",
+            },
+            basePriceEGP: payload.base_price_egp,
+            originalPriceEGP: payload.original_price_egp ?? undefined,
+            images: payload.images,
+            protocol: payload.protocol,
+            inStock: payload.in_stock,
+            isPopular: payload.is_popular,
+            isDeal: payload.is_deal,
+            rating: 5.0,
+            reviewsCount: 1,
+          };
+          setSmartProductsList((prev) => [newProd, ...prev]);
+        } else {
+          setSmartProductsList((prev) => [mapDbRowToSmartProduct(data), ...prev]);
+        }
+        toast.success(lang === "ar" ? "تمت إضافة الجهاز الجديد للمتجر بنجاح!" : "New product added to store successfully!");
+      }
+
+      setIsCreatingSmartProduct(false);
+    } catch (err) {
+      console.error("Save product error:", err);
+      toast.error(err instanceof Error ? err.message : "Error saving product");
+    }
+  };
+
+  const handleToggleStock = async (prod: SmartProduct) => {
+    const nextStatus = !prod.inStock;
+    setSmartProductsList((prev) =>
+      prev.map((p) => (p.id === prod.id ? { ...p, inStock: nextStatus } : p))
+    );
+    try {
+      const { error } = await supabase
+        .from("smart_products")
+        .update({ in_stock: nextStatus })
+        .eq("id", prod.id);
+
+      if (error) console.warn("Toggle stock DB error:", error.message);
+      toast.success(
+        nextStatus
+          ? lang === "ar" ? `تم تعديل "${prod.title.ar}" إلى: متوفر بالمخزن` : `"${prod.title.en}" marked In Stock`
+          : lang === "ar" ? `تم تعديل "${prod.title.ar}" إلى: غير متوفر` : `"${prod.title.en}" marked Out of Stock`
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleInlinePriceSave = async (id: string, newPrice: number) => {
+    if (newPrice <= 0) return;
+    setSmartProductsList((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, basePriceEGP: newPrice } : p))
+    );
+    setQuickPriceEditingId(null);
+    try {
+      const { error } = await supabase
+        .from("smart_products")
+        .update({ base_price_egp: newPrice })
+        .eq("id", id);
+      if (error) console.warn("Price update DB error:", error.message);
+      toast.success(lang === "ar" ? "تم تحديث السعر فورياً!" : "Price updated instantly!");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteSmartProduct = async (prod: SmartProduct) => {
+    const confirmed = window.confirm(
+      lang === "ar"
+        ? `هل أنت متأكد من حذف جهاز "${prod.title.ar}" نهائياً من المتجر؟`
+        : `Are you sure you want to delete "${prod.title.en}" from store?`
+    );
+    if (!confirmed) return;
+
+    setSmartProductsList((prev) => prev.filter((p) => p.id !== prod.id));
+    try {
+      const { error } = await supabase.from("smart_products").delete().eq("id", prod.id);
+      if (error) console.warn("Delete DB error:", error.message);
+      toast.success(lang === "ar" ? "تم حذف الجهاز بنجاح" : "Product deleted successfully");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // Export Users to Excel / CSV
   const exportUsersToExcel = () => {
     const headers = [
@@ -1206,10 +1606,36 @@ function Page() {
               <Users className="size-4" />
               {t("customers")} ({customers.length})
             </Button>
+
+            {/* TAB 5: SMART STORE & HARDWARE */}
+            <Button
+              variant={tab === "smart-store" ? "hero" : "outline"}
+              size="sm"
+              onClick={() => {
+                setTab("smart-store");
+                setSmartSearch("");
+              }}
+              className="rounded-xl flex items-center gap-1.5"
+            >
+              <ShoppingBag className="size-4" />
+              {t("smartStoreTab")} ({smartProductsList.length})
+            </Button>
           </div>
 
           {/* Right Action: CSV/Excel Exports or Add Project */}
           <div className="flex items-center gap-2">
+            {tab === "smart-store" && (
+              <Button
+                variant="gold"
+                size="sm"
+                onClick={openCreateSmartProductModal}
+                className="rounded-xl flex items-center gap-2 shadow-glow w-full sm:w-auto"
+              >
+                <Plus className="size-4" />
+                {t("addProduct")}
+              </Button>
+            )}
+
             {tab === "portfolio" && (
               <Button
                 variant="gold"
@@ -2333,6 +2759,340 @@ function Page() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════
+            TAB 5: SMART STORE & HARDWARE PRODUCTS MANAGEMENT
+        ═══════════════════════════════════════════════════════════════════ */}
+        {tab === "smart-store" && (
+          <div className="mt-6 space-y-6">
+            {/* Quick Stats Grid */}
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="glass rounded-2xl p-4 border border-border/80 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{lang === "ar" ? "إجمالي الأجهزة" : "Total Products"}</p>
+                  <p className="text-2xl font-black text-foreground mt-1">{smartProductsList.length}</p>
+                </div>
+                <ShoppingBag className="size-8 text-primary opacity-60" />
+              </div>
+
+              <div className="glass rounded-2xl p-4 border border-border/80 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{lang === "ar" ? "متوفر بالمخزن" : "In Stock"}</p>
+                  <p className="text-2xl font-black text-emerald-400 mt-1">
+                    {smartProductsList.filter((p) => p.inStock).length}
+                  </p>
+                </div>
+                <CheckCircle2 className="size-8 text-emerald-400 opacity-60" />
+              </div>
+
+              <div className="glass rounded-2xl p-4 border border-border/80 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{lang === "ar" ? "غير متوفر" : "Out of Stock"}</p>
+                  <p className="text-2xl font-black text-rose-400 mt-1">
+                    {smartProductsList.filter((p) => !p.inStock).length}
+                  </p>
+                </div>
+                <X className="size-8 text-rose-400 opacity-60" />
+              </div>
+
+              <div className="glass rounded-2xl p-4 border border-border/80 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-muted-foreground">{lang === "ar" ? "العروض والخصومات" : "Active Deals"}</p>
+                  <p className="text-2xl font-black text-gold mt-1">
+                    {smartProductsList.filter((p) => p.isDeal || (p.originalPriceEGP && p.originalPriceEGP > p.basePriceEGP)).length}
+                  </p>
+                </div>
+                <Tag className="size-8 text-gold opacity-60" />
+              </div>
+            </div>
+
+            {/* Smart Products Filters & Actions */}
+            <div className="glass rounded-3xl p-5 border border-border/80 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-12">
+                {/* Search */}
+                <div className="relative sm:col-span-5">
+                  <Search className="absolute start-3.5 top-3.5 size-4 text-muted-foreground" />
+                  <input
+                    value={smartSearch}
+                    onChange={(e) => setSmartSearch(e.target.value)}
+                    placeholder={lang === "ar" ? "بحث عن جهاز ذكي بالاسم، التصنيف، المعرف..." : "Search products by title, category, slug..."}
+                    className="w-full rounded-2xl border border-input bg-surface/80 ps-10 pe-9 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:shadow-glow transition-all"
+                  />
+                  {smartSearch && (
+                    <button
+                      onClick={() => setSmartSearch("")}
+                      className="absolute end-3 top-3 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Category Filter */}
+                <div className="sm:col-span-3">
+                  <select
+                    value={smartCategoryFilter}
+                    onChange={(e) => setSmartCategoryFilter(e.target.value)}
+                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{lang === "ar" ? "جميع التصنيفات" : "All Categories"}</option>
+                    {smartCategories.filter(c => c.id !== "all").map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {tl(cat.name)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Protocol Filter */}
+                <div className="sm:col-span-2">
+                  <select
+                    value={smartProtocolFilter}
+                    onChange={(e) => setSmartProtocolFilter(e.target.value)}
+                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{lang === "ar" ? "كل البروتوكولات" : "All Protocols"}</option>
+                    <option value="Wi-Fi">Wi-Fi</option>
+                    <option value="Zigbee">Zigbee 3.0</option>
+                    <option value="KNX">KNX Wired</option>
+                    <option value="Hybrid (Wi-Fi + Zigbee)">Hybrid</option>
+                  </select>
+                </div>
+
+                {/* Stock Status Filter */}
+                <div className="sm:col-span-2">
+                  <select
+                    value={smartStockFilter}
+                    onChange={(e) => setSmartStockFilter(e.target.value as "all" | "in_stock" | "out_of_stock")}
+                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                  >
+                    <option value="all">{lang === "ar" ? "كل الحالات" : "All Stock"}</option>
+                    <option value="in_stock">{lang === "ar" ? "متوفر بالمخزن" : "In Stock"}</option>
+                    <option value="out_of_stock">{lang === "ar" ? "غير متوفر" : "Out of Stock"}</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Action bar inside Smart Store */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
+                <p className="text-xs text-muted-foreground">
+                  {lang === "ar"
+                    ? `إجمالي ${filteredSmartProducts.length} جهاز (${smartProductsList.filter(p => p.inStock).length} متوفر)`
+                    : `Showing ${filteredSmartProducts.length} devices (${smartProductsList.filter(p => p.inStock).length} in stock)`}
+                </p>
+
+                <Button
+                  variant="gold"
+                  size="sm"
+                  onClick={openCreateSmartProductModal}
+                  className="rounded-xl flex items-center gap-2 shadow-glow text-xs"
+                >
+                  <Plus className="size-4" />
+                  <span>{t("addProduct")}</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Smart Products Modern Table */}
+            <div className="glass overflow-hidden rounded-3xl border border-border/80">
+              <div className="overflow-x-auto">
+                <table className="w-full text-start text-xs">
+                  <thead className="border-b border-border/80 bg-surface/80 text-muted-foreground">
+                    <tr>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "الجهاز والتصنيف" : "Product & Category"}</th>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "البروتوكول" : "Protocol"}</th>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "سعر البيع (ج.م)" : "Price (EGP)"}</th>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "الخصم" : "Discount"}</th>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "حالة المخزن" : "Stock"}</th>
+                      <th className="p-4 text-start font-semibold">{lang === "ar" ? "الشارات" : "Badges"}</th>
+                      <th className="p-4 text-end font-semibold">{lang === "ar" ? "الإجراءات" : "Actions"}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/40">
+                    {filteredSmartProducts.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="p-10 text-center text-muted-foreground">
+                          <ShoppingBag className="size-10 mx-auto mb-3 opacity-30 text-primary" />
+                          <p className="text-sm font-semibold text-foreground">
+                            {lang === "ar" ? "لم يتم العثور على أجهزة مطابقة للبحث." : "No smart devices found."}
+                          </p>
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={openCreateSmartProductModal}
+                            className="mt-4 rounded-xl text-xs"
+                          >
+                            <Plus className="size-3.5 mr-1" />
+                            {t("addProduct")}
+                          </Button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSmartProducts.map((prod) => {
+                        const isEditingPrice = quickPriceEditingId === prod.id;
+                        const hasDiscount = Boolean(prod.originalPriceEGP && prod.originalPriceEGP > prod.basePriceEGP);
+                        const discountPct = hasDiscount && prod.originalPriceEGP
+                          ? Math.round(((prod.originalPriceEGP - prod.basePriceEGP) / prod.originalPriceEGP) * 100)
+                          : 0;
+
+                        return (
+                          <tr key={prod.id} className="transition-colors hover:bg-surface/40">
+                            {/* Product Info */}
+                            <td className="p-4">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={prod.images[0] || "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"}
+                                  alt={tl(prod.title)}
+                                  className="size-12 rounded-xl object-cover border border-border/80 shrink-0"
+                                />
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-foreground truncate max-w-xs sm:max-w-md">
+                                    {tl(prod.title)}
+                                  </p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[11px] text-primary truncate">
+                                      {tl(prod.categoryName)}
+                                    </span>
+                                    <span className="text-[10px] text-muted-foreground font-mono">
+                                      ({prod.slug})
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Protocol */}
+                            <td className="p-4">
+                              <span className="rounded-lg bg-surface px-2.5 py-1 text-[11px] font-bold text-foreground border border-border">
+                                {prod.protocol}
+                              </span>
+                            </td>
+
+                            {/* Base Price & Quick Price Editor */}
+                            <td className="p-4">
+                              {isEditingPrice ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="number"
+                                    value={quickPriceValue}
+                                    onChange={(e) => setQuickPriceValue(Number(e.target.value))}
+                                    className="w-24 rounded-lg border border-primary bg-surface px-2 py-1 text-xs font-bold text-foreground outline-none"
+                                    autoFocus
+                                  />
+                                  <button
+                                    onClick={() => handleInlinePriceSave(prod.id, quickPriceValue)}
+                                    className="size-7 rounded-lg bg-primary text-background flex items-center justify-center hover:opacity-90"
+                                    title="Save Price"
+                                  >
+                                    <Check className="size-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => setQuickPriceEditingId(null)}
+                                    className="size-7 rounded-lg bg-surface text-muted-foreground flex items-center justify-center hover:text-foreground"
+                                    title="Cancel"
+                                  >
+                                    <X className="size-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-black text-sm text-foreground">
+                                    {prod.basePriceEGP.toLocaleString()} {lang === "ar" ? "ج.م" : "EGP"}
+                                  </span>
+                                  <button
+                                    onClick={() => {
+                                      setQuickPriceEditingId(prod.id);
+                                      setQuickPriceValue(prod.basePriceEGP);
+                                    }}
+                                    className="size-6 rounded-md hover:bg-surface flex items-center justify-center text-muted-foreground hover:text-primary transition-colors"
+                                    title={lang === "ar" ? "تعديل السعر فورياً" : "Edit Price"}
+                                  >
+                                    <Edit className="size-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Original Price / Discount */}
+                            <td className="p-4">
+                              {hasDiscount ? (
+                                <div className="space-y-0.5">
+                                  <span className="text-xs text-muted-foreground line-through block">
+                                    {prod.originalPriceEGP?.toLocaleString()} {lang === "ar" ? "ج.م" : "EGP"}
+                                  </span>
+                                  <span className="inline-block rounded-md bg-emerald-500/15 text-emerald-400 font-bold px-1.5 py-0.2 text-[10px] border border-emerald-500/30">
+                                    -{discountPct}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground/60">—</span>
+                              )}
+                            </td>
+
+                            {/* Stock Toggle */}
+                            <td className="p-4">
+                              <button
+                                onClick={() => handleToggleStock(prod)}
+                                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold border transition-all ${
+                                  prod.inStock
+                                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                    : "bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25"
+                                }`}
+                                title={lang === "ar" ? "انقر لتغيير حالة التوفر" : "Click to toggle stock"}
+                              >
+                                <span className={`size-1.5 rounded-full ${prod.inStock ? "bg-emerald-400" : "bg-rose-400"}`} />
+                                <span>{prod.inStock ? (lang === "ar" ? "متوفر" : "In Stock") : (lang === "ar" ? "غير متوفر" : "Out of Stock")}</span>
+                              </button>
+                            </td>
+
+                            {/* Badges */}
+                            <td className="p-4">
+                              <div className="flex flex-wrap items-center gap-1">
+                                {prod.isPopular && (
+                                  <span className="rounded-md bg-primary/20 text-primary border border-primary/30 px-1.5 py-0.5 text-[10px] font-bold">
+                                    Popular
+                                  </span>
+                                )}
+                                {prod.isDeal && (
+                                  <span className="rounded-md bg-gold/20 text-gold border border-gold/30 px-1.5 py-0.5 text-[10px] font-bold">
+                                    Deal
+                                  </span>
+                                )}
+                                {!prod.isPopular && !prod.isDeal && (
+                                  <span className="text-muted-foreground/50 text-[11px]">—</span>
+                                )}
+                              </div>
+                            </td>
+
+                            {/* Actions */}
+                            <td className="p-4 text-end">
+                              <div className="inline-flex items-center gap-1">
+                                <button
+                                  onClick={() => openEditSmartProductModal(prod)}
+                                  title={lang === "ar" ? "تعديل الجهاز" : "Edit product"}
+                                  className="inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-surface hover:text-primary"
+                                >
+                                  <Edit className="size-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteSmartProduct(prod)}
+                                  title={lang === "ar" ? "حذف الجهاز" : "Delete product"}
+                                  className="inline-flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <Trash2 className="size-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}

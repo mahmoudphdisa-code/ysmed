@@ -9,7 +9,8 @@ import {
   Tag,
   Check,
 } from "lucide-react";
-import { smartProducts, type SmartProduct, type Protocol, type SwitchColor, type GangCount } from "@/data/smartHomesData";
+import { type SmartProduct, type Protocol, type SwitchColor, type GangCount } from "@/data/smartHomesData";
+import { useSmartProducts } from "@/hooks/useSmartProducts";
 import { ProductCard } from "./ProductCard";
 import { SmartCategoryNav } from "./SmartCategoryNav";
 import { ProductDetailsModal } from "./ProductDetailsModal";
@@ -21,6 +22,7 @@ interface ProductCatalogProps {
 
 export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
   const { lang, tl } = useI18n();
+  const { products } = useSmartProducts();
 
   // Search and filter states
   const [search, setSearch] = useState("");
@@ -37,7 +39,7 @@ export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
 
   // Filter and sort computation
   const filteredProducts = useMemo(() => {
-    return smartProducts
+    return products
       .filter((p) => {
         // Category filter
         if (selectedCategory !== "all" && p.category !== selectedCategory) return false;
@@ -81,7 +83,7 @@ export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
         }
         return (b.isPopular ? 1 : 0) - (a.isPopular ? 1 : 0);
       });
-  }, [selectedCategory, selectedProtocol, selectedGang, selectedColor, dealsOnly, search, sortBy]);
+  }, [products, selectedCategory, selectedProtocol, selectedGang, selectedColor, dealsOnly, search, sortBy]);
 
   const hasActiveFilters =
     selectedCategory !== "all" ||
@@ -177,10 +179,11 @@ export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
               {/* Mobile Filter Toggle */}
               <button
                 onClick={() => setShowFiltersMobile(!showFiltersMobile)}
-                className={`flex sm:hidden items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-bold border transition-colors ${showFiltersMobile
+                className={`flex sm:hidden items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-bold border transition-colors ${
+                  showFiltersMobile
                     ? "bg-primary text-background border-primary"
                     : "bg-surface border-border text-foreground"
-                  }`}
+                }`}
               >
                 <SlidersHorizontal className="size-4" />
                 <span>{lang === "ar" ? "تصفية" : "Filter"}</span>
@@ -248,10 +251,11 @@ export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
             {/* Deals Only Toggle */}
             <button
               onClick={() => setDealsOnly(!dealsOnly)}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold border transition-all col-span-2 sm:col-span-1 justify-center sm:justify-start ${dealsOnly
+              className={`flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold border transition-all col-span-2 sm:col-span-1 justify-center sm:justify-start ${
+                dealsOnly
                   ? "bg-gold text-slate-950 border-gold shadow-gold"
                   : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                }`}
+              }`}
             >
               <Tag className="size-3.5" />
               <span>{lang === "ar" ? "العروض والخصومات فقط" : "Deals & Offers Only"}</span>
