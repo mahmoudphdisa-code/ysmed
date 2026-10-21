@@ -15,6 +15,7 @@ import { useI18n } from "@/lib/i18n";
 import type { SmartProduct, SwitchColor, GangCount, Protocol } from "@/data/smartHomesData";
 import { useSmartCart } from "@/hooks/useSmartCart";
 import { useSmartWishlist } from "@/hooks/useSmartWishlist";
+import { toast } from "sonner";
 
 interface ProductCardProps {
   product: SmartProduct;
@@ -76,7 +77,15 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
   const isFav = isWishlisted(product.id);
 
+  const isOutOfStock = !product.inStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0);
+  const isLowStock = !isOutOfStock && product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 5;
+
   const handleAddToCart = () => {
+    if (isOutOfStock) {
+      toast.error(lang === "ar" ? "عذراً، هذا المنتج غير متوفر حالياً بالمخزن" : "Sorry, this item is currently out of stock");
+      return;
+    }
+
     const variantDescEn = [
       product.availableGangs ? `${selectedGang}-Gang` : null,
       selectedProtocol,
@@ -120,18 +129,37 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   };
 
   return (
-    <div className="glass group relative flex flex-col justify-between rounded-3xl border border-border/80 bg-surface/40 p-4 transition-all duration-300 hover:border-primary/50 hover:shadow-glow hover:-translate-y-1">
+    <div className={`glass group relative flex flex-col justify-between rounded-3xl border transition-all duration-300 hover:shadow-glow hover:-translate-y-1 ${
+      isOutOfStock ? "border-border/50 opacity-80" : "border-border/80 bg-surface/40 hover:border-primary/50"
+    } p-4`}>
       {/* ─── Top Media & Badges ────────────────────────────────────────────── */}
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-surface/80 border border-border/50">
         <img
           src={product.images[0]}
           alt={tl(product.title)}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className={`h-full w-full object-cover transition-transform duration-500 ${isOutOfStock ? "grayscale-[60%]" : "group-hover:scale-105"}`}
           loading="lazy"
         />
 
-        {/* Dynamic Discount Badge */}
-        {activePriceInfo.discountPct && activePriceInfo.discountPct > 0 && (
+        {/* Out of Stock Overlay */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] flex items-center justify-center">
+            <span className="rounded-xl bg-destructive/90 text-white text-xs font-bold px-3 py-1 shadow-lg tracking-wide">
+              {lang === "ar" ? "نفدت الكمية" : "Out of Stock"}
+            </span>
+          </div>
+        )}
+
+        {/* Low Stock Warning Badge */}
+        {!isOutOfStock && isLowStock && (
+          <span className="absolute top-2.5 start-2.5 rounded-full bg-amber-500 text-slate-950 px-2.5 py-0.5 text-[10px] font-extrabold shadow-sm flex items-center gap-1.5 animate-pulse">
+            <span className="size-1.5 rounded-full bg-slate-950" />
+            {lang === "ar" ? `متبقي ${product.stockQuantity} فقط!` : `Only ${product.stockQuantity} left!`}
+          </span>
+        )}
+
+        {/* Dynamic Discount Badge (if not low stock to prevent overlapping) */}
+        {!isLowStock && !isOutOfStock && activePriceInfo.discountPct && activePriceInfo.discountPct > 0 && (
           <span className="absolute top-2.5 start-2.5 rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-extrabold text-slate-950 shadow-gold">
             {activePriceInfo.discountPct}% {lang === "ar" ? "خصم" : "OFF"}
           </span>
@@ -272,15 +300,26 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               {lang === "ar" ? "التفاصيل" : "Details"}
             </Button>
 
-            <Button
-              onClick={handleAddToCart}
-              variant="hero"
-              size="sm"
-              className="rounded-xl text-xs font-bold shadow-glow flex items-center justify-center gap-1.5"
-            >
-              <ShoppingCart className="size-3.5" />
-              <span>{lang === "ar" ? "أضف للسلة" : "Add to Cart"}</span>
-            </Button>
+            {isOutOfStock ? (
+              <Button
+                disabled
+                variant="outline"
+                size="sm"
+                className="rounded-xl text-xs font-semibold opacity-60 cursor-not-allowed bg-surface/30 border-border/60 text-muted-foreground"
+              >
+                <span>{lang === "ar" ? "نفدت الكمية" : "Sold Out"}</span>
+              </Button>
+            ) : (
+              <Button
+                onClick={handleAddToCart}
+                variant="hero"
+                size="sm"
+                className="rounded-xl text-xs font-bold shadow-glow flex items-center justify-center gap-1.5"
+              >
+                <ShoppingCart className="size-3.5" />
+                <span>{lang === "ar" ? "أضف للسلة" : "Add to Cart"}</span>
+              </Button>
+            )}
           </div>
         </div>
       </div>

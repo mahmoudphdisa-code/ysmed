@@ -38,6 +38,7 @@ export interface SmartProduct {
   images: string[];
   protocol: Protocol;
   inStock: boolean;
+  stockQuantity?: number | undefined;
   isPopular?: boolean | undefined;
   isDeal?: boolean | undefined;
   rating: number;

@@ -190,6 +190,7 @@ export type Database = {
           reviews_count: number
           slug: string
           specs: unknown
+          stock_quantity: number
           title_ar: string
           title_en: string
           updated_at: string
@@ -220,6 +221,7 @@ export type Database = {
           reviews_count?: number
           slug: string
           specs?: unknown
+          stock_quantity?: number
           title_ar: string
           title_en: string
           updated_at?: string
@@ -250,6 +252,7 @@ export type Database = {
           reviews_count?: number
           slug?: string
           specs?: unknown
+          stock_quantity?: number
           title_ar?: string
           title_en?: string
           updated_at?: string
@@ -328,6 +331,19 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      decrement_smart_product_stock: {
+        Args: {
+          order_items: Json
+        }
+        Returns: Json
+      }
+      set_smart_product_stock: {
+        Args: {
+          p_product_id: string
+          p_quantity: number
+        }
+        Returns: Json
       }
     }
     Enums: {

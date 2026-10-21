@@ -73,7 +73,8 @@ export function useSmartProducts() {
               "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"
             ],
             protocol: (row.protocol as Protocol) || "Wi-Fi",
-            inStock: row.in_stock,
+            inStock: row.in_stock && (row.stock_quantity === undefined || row.stock_quantity > 0),
+            stockQuantity: typeof row.stock_quantity === "number" ? row.stock_quantity : (row.in_stock ? 25 : 0),
             isPopular: row.is_popular,
             isDeal: row.is_deal,
             rating: Number(row.rating) || 4.9,

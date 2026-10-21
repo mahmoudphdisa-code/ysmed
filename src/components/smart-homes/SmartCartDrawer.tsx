@@ -115,6 +115,22 @@ export function SmartCartDrawer({ isOpen, onClose }: SmartCartDrawerProps) {
         console.error("Cart order submission error:", error);
       }
 
+      // Atomically decrement stock in Supabase smart_products
+      try {
+        const orderItemsPayload = items.map((i) => ({
+          productId: i.productId,
+          quantity: i.quantity,
+        }));
+        const { error: rpcErr } = await supabase.rpc("decrement_smart_product_stock", {
+          order_items: orderItemsPayload,
+        });
+        if (rpcErr) {
+          console.warn("Stock auto-decrement warning:", rpcErr.message);
+        }
+      } catch (stockErr) {
+        console.warn("Could not decrement stock:", stockErr);
+      }
+
       const orderRef = `YSM-${Date.now().toString().slice(-6)}`;
       setOrderSuccess(orderRef);
       clearCart();

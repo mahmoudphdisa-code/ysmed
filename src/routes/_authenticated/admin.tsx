@@ -162,7 +162,8 @@ function mapDbRowToSmartProduct(row: any): SmartProduct {
     originalPriceEGP: row.original_price_egp || undefined,
     images: imagesArr.length > 0 ? imagesArr : ["https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"],
     protocol: (row.protocol as Protocol) || "Wi-Fi",
-    inStock: row.in_stock,
+    inStock: row.in_stock && (row.stock_quantity === undefined || row.stock_quantity > 0),
+    stockQuantity: typeof row.stock_quantity === "number" ? row.stock_quantity : (row.in_stock ? 25 : 0),
     isPopular: row.is_popular,
     isDeal: row.is_deal,
     rating: Number(row.rating) || 4.9,
@@ -253,6 +254,7 @@ function Page() {
     description_ar: string;
     base_price_egp: number;
     original_price_egp: number | undefined;
+    stock_quantity: number;
     protocol: Protocol;
     image_url: string;
     in_stock: boolean;
@@ -270,6 +272,7 @@ function Page() {
     description_ar: "",
     base_price_egp: 990,
     original_price_egp: undefined,
+    stock_quantity: 25,
     protocol: "Wi-Fi",
     image_url: "",
     in_stock: true,
@@ -1066,6 +1069,7 @@ function Page() {
       description_ar: "",
       base_price_egp: 990,
       original_price_egp: undefined,
+      stock_quantity: 25,
       protocol: "Wi-Fi",
       image_url: "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80",
       in_stock: true,
@@ -1089,6 +1093,7 @@ function Page() {
       description_ar: prod.description.ar,
       base_price_egp: prod.basePriceEGP,
       original_price_egp: prod.originalPriceEGP,
+      stock_quantity: prod.stockQuantity ?? (prod.inStock ? 25 : 0),
       protocol: prod.protocol,
       image_url: prod.images[0] || "",
       in_stock: prod.inStock,
@@ -1137,6 +1142,9 @@ function Page() {
     }
 
     try {
+      const stockQty = Math.max(0, Number(smartProductForm.stock_quantity) || 0);
+      const isPositiveStock = stockQty > 0 && smartProductForm.in_stock;
+
       const payload = {
         slug: smartProductForm.slug || `ysmed-device-${Date.now().toString(36)}`,
         title_en: smartProductForm.title_en,
@@ -1148,9 +1156,10 @@ function Page() {
         description_ar: smartProductForm.description_ar,
         base_price_egp: Math.round(Number(smartProductForm.base_price_egp)),
         original_price_egp: smartProductForm.original_price_egp ? Math.round(Number(smartProductForm.original_price_egp)) : null,
+        stock_quantity: stockQty,
         protocol: smartProductForm.protocol,
         images: [smartProductForm.image_url || "https://images.unsplash.com/photo-1558002038-1055907df827?auto=format&fit=crop&w=800&q=80"],
-        in_stock: smartProductForm.in_stock,
+        in_stock: isPositiveStock,
         is_popular: smartProductForm.is_popular,
         is_deal: smartProductForm.is_deal,
         is_hidden: smartProductForm.is_hidden,
@@ -1181,7 +1190,8 @@ function Page() {
                   originalPriceEGP: payload.original_price_egp ?? undefined,
                   protocol: payload.protocol,
                   images: payload.images,
-                  inStock: payload.in_stock,
+                  inStock: isPositiveStock,
+                  stockQuantity: stockQty,
                   isPopular: payload.is_popular,
                   isDeal: payload.is_deal,
                 }
@@ -1222,7 +1232,8 @@ function Page() {
             originalPriceEGP: payload.original_price_egp ?? undefined,
             images: payload.images,
             protocol: payload.protocol,
-            inStock: payload.in_stock,
+            inStock: isPositiveStock,
+            stockQuantity: stockQty,
             isPopular: payload.is_popular,
             isDeal: payload.is_deal,
             rating: 5.0,
@@ -1244,21 +1255,45 @@ function Page() {
 
   const handleToggleStock = async (prod: SmartProduct) => {
     const nextStatus = !prod.inStock;
+    const newQty = nextStatus ? (prod.stockQuantity && prod.stockQuantity > 0 ? prod.stockQuantity : 25) : 0;
     setSmartProductsList((prev) =>
-      prev.map((p) => (p.id === prod.id ? { ...p, inStock: nextStatus } : p))
+      prev.map((p) => (p.id === prod.id ? { ...p, inStock: nextStatus, stockQuantity: newQty } : p))
     );
     try {
       const { error } = await supabase
         .from("smart_products")
-        .update({ in_stock: nextStatus })
+        .update({ in_stock: nextStatus, stock_quantity: newQty, updated_at: new Date().toISOString() })
         .eq("id", prod.id);
 
       if (error) console.warn("Toggle stock DB error:", error.message);
       toast.success(
         nextStatus
-          ? lang === "ar" ? `تم تعديل "${prod.title.ar}" إلى: متوفر بالمخزن` : `"${prod.title.en}" marked In Stock`
+          ? lang === "ar" ? `تم تعديل "${prod.title.ar}" إلى: متوفر بالمخزن (${newQty} قطعة)` : `"${prod.title.en}" marked In Stock (${newQty} units)`
           : lang === "ar" ? `تم تعديل "${prod.title.ar}" إلى: غير متوفر` : `"${prod.title.en}" marked Out of Stock`
       );
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleQuickStockAdjust = async (prod: SmartProduct, delta: number) => {
+    const currentQty = prod.stockQuantity ?? (prod.inStock ? 25 : 0);
+    const newQty = Math.max(0, currentQty + delta);
+    const newInStock = newQty > 0;
+
+    setSmartProductsList((prev) =>
+      prev.map((p) =>
+        p.id === prod.id ? { ...p, stockQuantity: newQty, inStock: newInStock } : p
+      )
+    );
+
+    try {
+      const { error } = await supabase
+        .from("smart_products")
+        .update({ stock_quantity: newQty, in_stock: newInStock, updated_at: new Date().toISOString() })
+        .eq("id", prod.id);
+
+      if (error) console.warn("Stock update DB error:", error.message);
     } catch (e) {
       console.error(e);
     }
@@ -3032,20 +3067,57 @@ function Page() {
                               )}
                             </td>
 
-                            {/* Stock Toggle */}
+                            {/* Stock & Units Stepper */}
                             <td className="p-4">
-                              <button
-                                onClick={() => handleToggleStock(prod)}
-                                className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold border transition-all ${
-                                  prod.inStock
-                                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
-                                    : "bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25"
-                                }`}
-                                title={lang === "ar" ? "انقر لتغيير حالة التوفر" : "Click to toggle stock"}
-                              >
-                                <span className={`size-1.5 rounded-full ${prod.inStock ? "bg-emerald-400" : "bg-rose-400"}`} />
-                                <span>{prod.inStock ? (lang === "ar" ? "متوفر" : "In Stock") : (lang === "ar" ? "غير متوفر" : "Out of Stock")}</span>
-                              </button>
+                              <div className="space-y-1.5">
+                                <button
+                                  onClick={() => handleToggleStock(prod)}
+                                  className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold border transition-all ${
+                                    prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0)
+                                      ? prod.stockQuantity !== undefined && prod.stockQuantity <= 5
+                                        ? "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25"
+                                        : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                      : "bg-rose-500/15 text-rose-400 border-rose-500/30 hover:bg-rose-500/25"
+                                  }`}
+                                  title={lang === "ar" ? "انقر لتغيير حالة التوفر" : "Click to toggle stock"}
+                                >
+                                  <span className={`size-1.5 rounded-full ${
+                                    prod.inStock && (prod.stockQuantity === undefined || prod.stockQuantity > 0)
+                                      ? prod.stockQuantity !== undefined && prod.stockQuantity <= 5
+                                        ? "bg-amber-400 animate-pulse"
+                                        : "bg-emerald-400"
+                                      : "bg-rose-400"
+                                  }`} />
+                                  <span>
+                                    {!prod.inStock || prod.stockQuantity === 0
+                                      ? lang === "ar" ? "نفدت الكمية" : "Out of Stock"
+                                      : prod.stockQuantity !== undefined && prod.stockQuantity <= 5
+                                      ? lang === "ar" ? `منخفض (${prod.stockQuantity})` : `Low (${prod.stockQuantity})`
+                                      : lang === "ar" ? `متوفر (${prod.stockQuantity ?? 25})` : `In Stock (${prod.stockQuantity ?? 25})`}
+                                  </span>
+                                </button>
+
+                                {/* Quick inline stepper for remaining inventory */}
+                                <div className="inline-flex items-center rounded-lg border border-border/60 bg-surface/80 px-1 py-0.5 gap-1 text-[11px]">
+                                  <button
+                                    onClick={() => handleQuickStockAdjust(prod, -1)}
+                                    title="-1 unit"
+                                    className="size-5 rounded hover:bg-surface text-muted-foreground hover:text-foreground font-mono flex items-center justify-center font-bold"
+                                  >
+                                    -
+                                  </button>
+                                  <span className="font-mono font-bold text-foreground min-w-[20px] text-center">
+                                    {prod.stockQuantity ?? (prod.inStock ? 25 : 0)}
+                                  </span>
+                                  <button
+                                    onClick={() => handleQuickStockAdjust(prod, 1)}
+                                    title="+1 unit"
+                                    className="size-5 rounded hover:bg-surface text-muted-foreground hover:text-foreground font-mono flex items-center justify-center font-bold"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
                             </td>
 
                             {/* Badges */}
@@ -3433,8 +3505,8 @@ function Page() {
               </div>
             </div>
 
-            {/* Price EGP & Original Price EGP */}
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* Price EGP, Original Price EGP & Stock Quantity */}
+            <div className="grid gap-3 sm:grid-cols-3">
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">
                   {t("priceEgp")} *
@@ -3450,7 +3522,7 @@ function Page() {
 
               <div>
                 <label className="text-xs font-semibold text-foreground mb-1 block">
-                  {t("originalPriceEgp")} ({lang === "ar" ? "اختياري لحساب الخصم" : "Optional for Discount"})
+                  {t("originalPriceEgp")} ({lang === "ar" ? "خصم" : "Discount"})
                 </label>
                 <input
                   type="number"
@@ -3458,6 +3530,20 @@ function Page() {
                   onChange={(e) => setSmartProductForm((p) => ({ ...p, original_price_egp: e.target.value ? Number(e.target.value) : undefined }))}
                   placeholder="1150"
                   className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "الكمية بالمخزن (قطع) *" : "Stock (Units) *"}
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  value={smartProductForm.stock_quantity}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, stock_quantity: Math.max(0, Number(e.target.value)) }))}
+                  placeholder="25"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary font-mono font-bold"
                 />
               </div>
             </div>

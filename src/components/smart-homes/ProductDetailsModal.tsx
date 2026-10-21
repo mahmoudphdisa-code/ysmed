@@ -11,6 +11,7 @@ import {
   Wrench,
   Info,
   Layers,
+  AlertTriangle,
 } from "lucide-react";
 import {
   Dialog,
@@ -97,7 +98,12 @@ export function ProductDetailsModal({
 
   const isFav = isWishlisted(product.id);
 
+  const isOutOfStock = !product.inStock || (product.stockQuantity !== undefined && product.stockQuantity <= 0);
+  const isLowStock = !isOutOfStock && product.stockQuantity !== undefined && product.stockQuantity > 0 && product.stockQuantity <= 5;
+  const maxAllowedQuantity = isOutOfStock ? 0 : Math.min(product.stockQuantity ?? 50, 20);
+
   const handleAddToCart = () => {
+    if (isOutOfStock) return;
     const variantDescEn = [
       product.availableGangs ? `${selectedGang}-Gang` : null,
       selectedProtocol,
@@ -203,15 +209,31 @@ export function ProductDetailsModal({
               </div>
             )}
 
-            {/* Fast Features Badges */}
-            <div className="rounded-2xl bg-surface/60 p-3.5 border border-border/50 space-y-2 text-xs">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold">
-                <CheckCircle2 className="size-4 shrink-0" />
-                <span>{lang === "ar" ? "متوفر بالمخزون للتوصيل الفوري في مصر" : "In Stock for Fast Delivery in Egypt"}</span>
-              </div>
+            {/* Dynamic Stock & Fast Features Badges */}
+            <div className="rounded-2xl bg-surface/60 p-3.5 border border-border/50 space-y-2.5 text-xs">
+              {isOutOfStock ? (
+                <div className="flex items-center gap-2 text-rose-400 font-bold bg-rose-500/10 p-2 rounded-xl border border-rose-500/30">
+                  <X className="size-4 shrink-0 text-rose-400" />
+                  <span>{lang === "ar" ? "عذراً، نفدت كمية هذا الجهاز من المخزن حالياً" : "Out of Stock — Currently Unavailable"}</span>
+                </div>
+              ) : isLowStock ? (
+                <div className="flex items-center gap-2 text-amber-400 font-bold bg-amber-500/10 p-2 rounded-xl border border-amber-500/30 animate-pulse">
+                  <AlertTriangle className="size-4 shrink-0 text-amber-400" />
+                  <span>{lang === "ar" ? `سارع بالشراء! متبقي ${product.stockQuantity} قطع فقط بالمخزن` : `Low Stock: Only ${product.stockQuantity} units left in stock!`}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-emerald-400 font-semibold">
+                  <CheckCircle2 className="size-4 shrink-0" />
+                  <span>
+                    {lang === "ar"
+                      ? `متوفر بالمخزون (${product.stockQuantity ?? 25} قطعة) للتوصيل الفوري`
+                      : `In Stock (${product.stockQuantity ?? 25} units) for Fast Delivery`}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2 text-muted-foreground">
                 <ShieldCheck className="size-4 shrink-0 text-primary" />
-                <span>{lang === "ar" ? "ضمان استبدال وصيانة رسمي من YSMED" : "Official YSMED Replacement Warranty"}</span>
+                <span>{lang === "ar" ? "ضمان استبدال وصيانة رسمي معتمد من YSMED" : "Official YSMED Certified Hardware Warranty"}</span>
               </div>
             </div>
           </div>
@@ -386,37 +408,50 @@ export function ProductDetailsModal({
               {/* Quantity selector */}
               <div className="flex items-center rounded-xl border border-border bg-surface px-2 py-1 w-full sm:w-auto justify-between">
                 <button
+                  disabled={isOutOfStock || quantity <= 1}
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground font-bold"
+                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground font-bold disabled:opacity-40"
                 >
                   -
                 </button>
                 <span className="px-3 font-bold text-sm text-foreground">{quantity}</span>
                 <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground font-bold"
+                  disabled={isOutOfStock || quantity >= maxAllowedQuantity}
+                  onClick={() => setQuantity((q) => Math.min(maxAllowedQuantity, q + 1))}
+                  className="size-7 rounded-lg text-muted-foreground hover:text-foreground font-bold disabled:opacity-40"
                 >
                   +
                 </button>
               </div>
 
               {/* Add to Cart button */}
-              <Button
-                onClick={() => {
-                  handleAddToCart();
-                  onClose();
-                }}
-                variant="hero"
-                size="lg"
-                className="rounded-xl w-full sm:flex-1 font-bold shadow-glow flex items-center justify-center gap-2"
-              >
-                <ShoppingCart className="size-4" />
-                <span>
-                  {lang === "ar"
-                    ? `أضف للسلة (${(activePriceInfo.priceEGP * quantity).toLocaleString()} ج.م)`
-                    : `Add to Cart (${(activePriceInfo.priceEGP * quantity).toLocaleString()} EGP)`}
-                </span>
-              </Button>
+              {isOutOfStock ? (
+                <Button
+                  disabled
+                  variant="outline"
+                  size="lg"
+                  className="rounded-xl w-full sm:flex-1 font-bold opacity-60 cursor-not-allowed bg-surface/30 border-border/60 text-muted-foreground"
+                >
+                  <span>{lang === "ar" ? "نفدت الكمية بالمخزن" : "Sold Out / Unavailable"}</span>
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    handleAddToCart();
+                    onClose();
+                  }}
+                  variant="hero"
+                  size="lg"
+                  className="rounded-xl w-full sm:flex-1 font-bold shadow-glow flex items-center justify-center gap-2"
+                >
+                  <ShoppingCart className="size-4" />
+                  <span>
+                    {lang === "ar"
+                      ? `أضف للسلة (${(activePriceInfo.priceEGP * quantity).toLocaleString()} ج.م)`
+                      : `Add to Cart (${(activePriceInfo.priceEGP * quantity).toLocaleString()} EGP)`}
+                  </span>
+                </Button>
+              )}
 
               {/* Request Installation Quote Button */}
               <Button
