@@ -43,6 +43,7 @@ export function SmartCartDrawer({ isOpen, onClose }: SmartCartDrawerProps) {
     updateQuantity,
     removeFromCart,
     clearCart,
+    isUserLoggedIn,
   } = useSmartCart();
 
   // Checkout Form State
@@ -176,6 +177,12 @@ export function SmartCartDrawer({ isOpen, onClose }: SmartCartDrawerProps) {
               ? "مراجعة الأجهزة المختارة وطلب التوصيل أو المعاينة والتركيب"
               : "Review your selected devices and place an order or installation request"}
           </SheetDescription>
+          {isUserLoggedIn && (
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 mt-2 font-medium">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>{lang === "ar" ? "سلة المشتريات متزامنة سحابياً مع حسابك في Supabase" : "Cart is synced with your Supabase account"}</span>
+            </div>
+          )}
         </SheetHeader>
 
         {/* ─── Cart Body ────────────────────────────────────────────────────── */}

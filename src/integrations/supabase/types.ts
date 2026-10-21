@@ -257,6 +257,66 @@ export type Database = {
         }
         Relationships: []
       }
+      cart_items: {
+        Row: {
+          color: string | null
+          created_at: string
+          gang_count: number | null
+          id: string
+          image: string
+          item_id: string
+          original_price_egp: number | null
+          price_egp: number
+          product_id: string
+          protocol: string | null
+          quantity: number
+          title_ar: string
+          title_en: string
+          updated_at: string
+          user_id: string
+          variant_label_ar: string | null
+          variant_label_en: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          gang_count?: number | null
+          id?: string
+          image: string
+          item_id: string
+          original_price_egp?: number | null
+          price_egp: number
+          product_id: string
+          protocol?: string | null
+          quantity?: number
+          title_ar: string
+          title_en: string
+          updated_at?: string
+          user_id: string
+          variant_label_ar?: string | null
+          variant_label_en?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          gang_count?: number | null
+          id?: string
+          image?: string
+          item_id?: string
+          original_price_egp?: number | null
+          price_egp?: number
+          product_id?: string
+          protocol?: string | null
+          quantity?: number
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
+          user_id?: string
+          variant_label_ar?: string | null
+          variant_label_en?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
