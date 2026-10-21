@@ -278,8 +278,8 @@ export function ProductCatalog({ onRequestInstallation }: ProductCatalogProps) {
         <div className="flex items-center justify-between mb-6 text-xs text-muted-foreground px-1">
           <span>
             {lang === "ar"
-              ? `عرض ${filteredProducts.length} من أصل ${smartProducts.length} جهاز ذكي`
-              : `Showing ${filteredProducts.length} of ${smartProducts.length} smart devices`}
+              ? `عرض ${filteredProducts.length} من أصل ${products.length} جهاز ذكي`
+              : `Showing ${filteredProducts.length} of ${products.length} smart devices`}
           </span>
           <span className="hidden sm:inline text-primary">
             {lang === "ar" ? "أسعار رسمية بالجنيه المصري (EGP) معتمدة" : "All prices in Egyptian Pounds (EGP)"}

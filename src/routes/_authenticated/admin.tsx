@@ -151,12 +151,12 @@ function mapDbRowToSmartProduct(row: any): SmartProduct {
     features: features.length > 0 ? features : [{ en: "Standard certified smart device", ar: "جهاز ذكي معتمد" }],
     specs: {
       protocol: (row.protocol as Protocol) || "Wi-Fi",
-      voltage: (specsRaw.voltage as string) || "100V–240V AC",
-      neutralWireRequired: specsRaw.neutralWireRequired !== undefined ? (specsRaw.neutralWireRequired as boolean | string) : "Flexible",
-      voiceCompatibility: Array.isArray(specsRaw.voiceCompatibility) ? (specsRaw.voiceCompatibility as string[]) : ["Alexa", "Google Assistant"],
-      appControl: (specsRaw.appControl as string) || "Smart Life / Tuya",
-      dimensions: specsRaw.dimensions as string | undefined,
-      maxLoad: specsRaw.maxLoad as string | undefined,
+      voltage: (specsRaw["voltage"] as string) || "100V–240V AC",
+      neutralWireRequired: specsRaw["neutralWireRequired"] !== undefined ? (specsRaw["neutralWireRequired"] as boolean | string) : "Flexible",
+      voiceCompatibility: Array.isArray(specsRaw["voiceCompatibility"]) ? (specsRaw["voiceCompatibility"] as string[]) : ["Alexa", "Google Assistant"],
+      appControl: (specsRaw["appControl"] as string) || "Smart Life / Tuya",
+      dimensions: specsRaw["dimensions"] as string | undefined,
+      maxLoad: specsRaw["maxLoad"] as string | undefined,
     },
     basePriceEGP: row.base_price_egp,
     originalPriceEGP: row.original_price_egp || undefined,
@@ -3333,6 +3333,262 @@ function Page() {
             >
               <Check className="size-4" />
               <span>{t("projectSaved")}</span>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MODAL: ADD / EDIT SMART PRODUCT
+      ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={isCreatingSmartProduct}
+        onOpenChange={(open) => !open && setIsCreatingSmartProduct(false)}
+      >
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto glass glow-border rounded-3xl border-border/80 p-6">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+              <ShoppingBag className="size-5 text-primary" />
+              {editingSmartProduct ? t("editProduct") : t("addProduct")}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground">
+              {lang === "ar"
+                ? "إدارة بيانات الجهاز الذكي، الأسعار بالجنيه المصري، الخصومات وحالة التوفر بالمخزن."
+                : "Manage smart hardware details, pricing in EGP, discounts, and inventory status."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Title EN & AR */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "اسم الجهاز بالعربية *" : "Title (Arabic) *"}
+                </label>
+                <input
+                  value={smartProductForm.title_ar}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, title_ar: e.target.value }))}
+                  placeholder="مثال: مفتاح لمس ذكي من الزجاج الكريستالي"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                  dir="rtl"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "اسم الجهاز بالإنجليزية *" : "Title (English) *"}
+                </label>
+                <input
+                  value={smartProductForm.title_en}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, title_en: e.target.value }))}
+                  placeholder="e.g. Luxury Crystal Glass Smart Switch"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+
+            {/* Category & Protocol */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "التصنيف" : "Category"}
+                </label>
+                <select
+                  value={smartProductForm.category}
+                  onChange={(e) => {
+                    const catId = e.target.value;
+                    const matched = smartCategories.find((c) => c.id === catId);
+                    setSmartProductForm((p) => ({
+                      ...p,
+                      category: catId,
+                      category_name_en: matched?.name.en || catId,
+                      category_name_ar: matched?.name.ar || catId,
+                    }));
+                  }}
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                >
+                  {smartCategories.filter(c => c.id !== "all").map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {tl(cat.name)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "البروتوكول اللاسلكي" : "Protocol"}
+                </label>
+                <select
+                  value={smartProductForm.protocol}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, protocol: e.target.value as Protocol }))}
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3 py-2.5 text-xs text-foreground outline-none focus:border-primary cursor-pointer"
+                >
+                  <option value="Wi-Fi">Wi-Fi (Direct Connect)</option>
+                  <option value="Zigbee">Zigbee 3.0 Mesh</option>
+                  <option value="KNX">KNX Wired Bus</option>
+                  <option value="Hybrid (Wi-Fi + Zigbee)">Hybrid (Wi-Fi + Zigbee)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Price EGP & Original Price EGP */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("priceEgp")} *
+                </label>
+                <input
+                  type="number"
+                  value={smartProductForm.base_price_egp}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, base_price_egp: Number(e.target.value) }))}
+                  placeholder="890"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary font-mono font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {t("originalPriceEgp")} ({lang === "ar" ? "اختياري لحساب الخصم" : "Optional for Discount"})
+                </label>
+                <input
+                  type="number"
+                  value={smartProductForm.original_price_egp || ""}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, original_price_egp: e.target.value ? Number(e.target.value) : undefined }))}
+                  placeholder="1150"
+                  className="w-full rounded-xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs text-foreground outline-none focus:border-primary font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Image Upload or URL */}
+            <div>
+              <label className="text-xs font-semibold text-foreground mb-1 block">
+                {lang === "ar" ? "صورة الجهاز (رابط أو رفع من الجهاز)" : "Product Image (URL or Upload)"}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={smartProductForm.image_url}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, image_url: e.target.value }))}
+                  placeholder="https://... or upload below"
+                  className="w-full flex-1 rounded-xl border border-input bg-surface px-3 py-2 text-xs text-foreground outline-none focus:border-primary font-mono"
+                  dir="ltr"
+                />
+
+                <label className="relative inline-flex items-center gap-1.5 rounded-xl border border-primary bg-primary/10 px-3.5 py-2 text-xs font-semibold text-primary hover:bg-primary/20 cursor-pointer transition-colors whitespace-nowrap">
+                  <Upload className="size-3.5" />
+                  <span>{uploadingProductImage ? (lang === "ar" ? "جاري الرفع..." : "Uploading...") : t("uploadImage")}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={uploadingProductImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUploadProductImage(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {smartProductForm.image_url && (
+                <div className="flex items-center gap-3 pt-2">
+                  <img
+                    src={smartProductForm.image_url}
+                    alt="Preview"
+                    className="size-16 rounded-xl object-cover border border-border"
+                  />
+                  <p className="text-[11px] text-muted-foreground truncate max-w-sm">
+                    {smartProductForm.image_url}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Flags: In Stock, Popular, Deal */}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="flex items-center gap-2.5 rounded-2xl bg-surface/60 p-3 border border-border/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smartProductForm.in_stock}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, in_stock: e.target.checked }))}
+                  className="rounded text-primary focus:ring-primary size-4"
+                />
+                <span className="text-xs font-semibold text-foreground">{t("inStock")}</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 rounded-2xl bg-surface/60 p-3 border border-border/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smartProductForm.is_popular}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, is_popular: e.target.checked }))}
+                  className="rounded text-primary focus:ring-primary size-4"
+                />
+                <span className="text-xs font-semibold text-foreground">{lang === "ar" ? "الأكثر طلباً (Popular)" : "Popular Item"}</span>
+              </label>
+
+              <label className="flex items-center gap-2.5 rounded-2xl bg-surface/60 p-3 border border-border/50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={smartProductForm.is_deal}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, is_deal: e.target.checked }))}
+                  className="rounded text-primary focus:ring-primary size-4"
+                />
+                <span className="text-xs font-semibold text-foreground">{lang === "ar" ? "عرض خاص (Deal)" : "Special Deal"}</span>
+              </label>
+            </div>
+
+            {/* Descriptions AR & EN */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "الوصف بالعربية" : "Description (Arabic)"}
+                </label>
+                <textarea
+                  rows={3}
+                  value={smartProductForm.description_ar}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, description_ar: e.target.value }))}
+                  placeholder="وصف مميزات ومواصفات الجهاز..."
+                  className="w-full rounded-xl border border-input bg-surface/80 p-3 text-xs text-foreground outline-none focus:border-primary leading-relaxed"
+                  dir="rtl"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-foreground mb-1 block">
+                  {lang === "ar" ? "الوصف بالإنجليزية" : "Description (English)"}
+                </label>
+                <textarea
+                  rows={3}
+                  value={smartProductForm.description_en}
+                  onChange={(e) => setSmartProductForm((p) => ({ ...p, description_en: e.target.value }))}
+                  placeholder="Hardware features and technical highlights..."
+                  className="w-full rounded-xl border border-input bg-surface/80 p-3 text-xs text-foreground outline-none focus:border-primary leading-relaxed"
+                  dir="ltr"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/40">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCreatingSmartProduct(false)}
+              className="rounded-xl text-xs"
+            >
+              {t("close")}
+            </Button>
+
+            <Button
+              variant="hero"
+              size="sm"
+              onClick={handleSaveSmartProduct}
+              className="rounded-xl text-xs shadow-glow flex items-center gap-1.5"
+            >
+              <Check className="size-4" />
+              <span>{lang === "ar" ? "حفظ الجهاز والأسعار" : "Save Product"}</span>
             </Button>
           </DialogFooter>
         </DialogContent>

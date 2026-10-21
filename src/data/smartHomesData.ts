@@ -7,13 +7,13 @@ export type GangCount = 1 | 2 | 3 | 4;
 export interface ProductVariant {
   id: string;
   sku: string;
-  gangCount?: GangCount;
+  gangCount?: GangCount | undefined;
   protocol: Protocol;
   color: SwitchColor;
   priceEGP: number;
-  originalPriceEGP?: number;
+  originalPriceEGP?: number | undefined;
   inStock: boolean;
-  image?: string;
+  image?: string | undefined;
 }
 
 export interface SmartProduct {
@@ -30,21 +30,21 @@ export interface SmartProduct {
     neutralWireRequired: boolean | string;
     voiceCompatibility: string[];
     appControl: string;
-    dimensions?: string;
-    maxLoad?: string;
+    dimensions?: string | undefined;
+    maxLoad?: string | undefined;
   };
   basePriceEGP: number;
-  originalPriceEGP?: number;
+  originalPriceEGP?: number | undefined;
   images: string[];
   protocol: Protocol;
   inStock: boolean;
-  isPopular?: boolean;
-  isDeal?: boolean;
+  isPopular?: boolean | undefined;
+  isDeal?: boolean | undefined;
   rating: number;
   reviewsCount: number;
-  variants?: ProductVariant[];
-  availableColors?: SwitchColor[];
-  availableGangs?: GangCount[];
+  variants?: ProductVariant[] | undefined;
+  availableColors?: SwitchColor[] | undefined;
+  availableGangs?: GangCount[] | undefined;
 }
 
 export interface SmartPackage {
@@ -64,9 +64,9 @@ export interface SmartPackage {
   mainFeatures: L[];
   equipmentPriceEGP: number;
   installationPriceEGP: number;
-  discountPercentage?: number;
-  isPopular?: boolean;
-  isRecommended?: boolean;
+  discountPercentage?: number | undefined;
+  isPopular?: boolean | undefined;
+  isRecommended?: boolean | undefined;
   idealFor: L;
   image: string;
 }
