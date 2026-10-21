@@ -6,13 +6,13 @@ export interface CartItem {
   productId: string;
   titleEn: string;
   titleAr: string;
-  variantLabelEn?: string;
-  variantLabelAr?: string;
-  gangCount?: number;
-  protocol?: string;
-  color?: string;
+  variantLabelEn?: string | undefined;
+  variantLabelAr?: string | undefined;
+  gangCount?: number | undefined;
+  protocol?: string | undefined;
+  color?: string | undefined;
   priceEGP: number;
-  originalPriceEGP?: number;
+  originalPriceEGP?: number | undefined;
   quantity: number;
   image: string;
 }
@@ -61,7 +61,7 @@ export function useSmartCart() {
   };
 
   const addToCart = useCallback(
-    (item: Omit<CartItem, "quantity"> & { quantity?: number }, lang: "en" | "ar" = "en") => {
+    (item: Omit<CartItem, "quantity"> & { quantity?: number | undefined }, lang: "en" | "ar" = "en") => {
       const qtyToAdd = item.quantity || 1;
       const current = (() => {
         try {
@@ -75,14 +75,20 @@ export function useSmartCart() {
       const existingIndex = current.findIndex((i) => i.id === item.id);
       let updated: CartItem[];
 
-      if (existingIndex > -1) {
+      const existing = existingIndex > -1 ? current[existingIndex] : undefined;
+      if (existing) {
         updated = [...current];
         updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + qtyToAdd,
+          ...existing,
+          quantity: existing.quantity + qtyToAdd,
         };
       } else {
-        updated = [...current, { ...item, quantity: qtyToAdd }];
+        const { quantity: _q, ...rest } = item;
+        const newItem: CartItem = {
+          ...rest,
+          quantity: qtyToAdd,
+        };
+        updated = [...current, newItem];
       }
 
       saveItems(updated);

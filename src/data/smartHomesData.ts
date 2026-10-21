@@ -79,7 +79,7 @@ export interface TechComparisonItem {
   pros: L[];
   cons: L[];
   idealFor: L;
-  hubRequired: boolean | string;
+  hubRequired: boolean | L;
   rangeMesh: L;
   powerConsumption: L;
   latency: L;

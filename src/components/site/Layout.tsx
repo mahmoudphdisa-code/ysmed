@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
-import { Menu, X, Globe, ChevronRight, User } from "lucide-react";
+import { Menu, X, Globe, ChevronRight, User, Sparkles } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", k: "home" },
+  { to: "/smart-homes", k: "smartHomes", isSpecial: true },
   { to: "/solutions", k: "solutions" },
   { to: "/about", k: "about" },
   { to: "/contact", k: "contact" },
@@ -62,6 +63,13 @@ export function Navbar() {
             className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
           >
             {t("home")}
+          </Link>
+          <Link
+            to="/smart-homes"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold text-foreground transition-all hover:text-primary data-[status=active]:text-primary data-[status=active]:bg-primary/10 border border-transparent data-[status=active]:border-primary/30"
+          >
+            <Sparkles className="size-3.5 text-gold animate-pulse" />
+            <span>{t("smartHomes")}</span>
           </Link>
           <Link
             to="/solutions"

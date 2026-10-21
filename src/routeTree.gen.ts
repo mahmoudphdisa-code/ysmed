@@ -15,6 +15,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as RequestRouteImport } from './routes/request'
+import { Route as SmartHomesRouteImport } from './routes/smart-homes'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
@@ -49,6 +50,11 @@ const RequestRoute = RequestRouteImport.update({
   path: '/request',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SmartHomesRoute = SmartHomesRouteImport.update({
+  id: '/smart-homes',
+  path: '/smart-homes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
   id: '/account',
   path: '/account',
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/request': typeof RequestRoute
+  '/smart-homes': typeof SmartHomesRoute
   '/account': typeof AuthenticatedAccountRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -87,6 +94,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/request': typeof RequestRoute
+  '/smart-homes': typeof SmartHomesRoute
   '/account': typeof AuthenticatedAccountRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -100,6 +108,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
   '/request': typeof RequestRoute
+  '/smart-homes': typeof SmartHomesRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/solutions/$slug': typeof SolutionsSlugRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/request'
+    | '/smart-homes'
     | '/account'
     | '/admin'
     | '/solutions/$slug'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/request'
+    | '/smart-homes'
     | '/account'
     | '/admin'
     | '/solutions/$slug'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/contact'
     | '/request'
+    | '/smart-homes'
     | '/_authenticated/account'
     | '/_authenticated/admin'
     | '/solutions/$slug'
@@ -149,6 +161,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
   RequestRoute: typeof RequestRoute
+  SmartHomesRoute: typeof SmartHomesRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
   SolutionsIndexRoute: typeof SolutionsIndexRoute
 }
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       path: '/request'
       fullPath: '/request'
       preLoaderRoute: typeof RequestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/smart-homes': {
+      id: '/smart-homes'
+      path: '/smart-homes'
+      fullPath: '/smart-homes'
+      preLoaderRoute: typeof SmartHomesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/account': {
@@ -248,6 +268,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
   RequestRoute: RequestRoute,
+  SmartHomesRoute: SmartHomesRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,
   SolutionsIndexRoute: SolutionsIndexRoute,
 }
