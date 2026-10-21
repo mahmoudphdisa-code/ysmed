@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS public.cart_items (
   updated_at timestamptz NOT NULL DEFAULT now(),
   CONSTRAINT cart_items_user_item_unique UNIQUE (user_id, item_id)
 );
-
+  
 -- Grants
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.cart_items TO authenticated;
 GRANT ALL ON public.cart_items TO service_role;
