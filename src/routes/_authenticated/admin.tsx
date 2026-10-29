@@ -6,6 +6,7 @@ import {
   FileText,
   Download,
   Search,
+  User,
   Users,
   MessageSquare,
   Shield,
@@ -50,6 +51,7 @@ import {
   Receipt,
   FileCheck,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
@@ -186,6 +188,7 @@ function mapDbRowToSmartProduct(row: any): SmartProduct {
 
 function Page() {
   const { t, tl, lang } = useI18n();
+  const isAr = lang === "ar";
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [rows, setRows] = useState<Inquiry[]>([]);
@@ -193,10 +196,52 @@ function Page() {
   const [rolesMap, setRolesMap] = useState<Record<string, string>>({});
   
   // Navigation & Tabs: overview | inquiries | customers | portfolio | smart-store
-  const [tab, setTab] = useState<"overview" | "inquiries" | "customers" | "portfolio" | "smart-store">("overview");
+  const [tab, setTabState] = useState<"overview" | "inquiries" | "customers" | "portfolio" | "smart-store">(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search).get("tab");
+      if (p === "inquiries" || p === "customers" || p === "portfolio" || p === "smart-store") {
+        return p;
+      }
+    }
+    return "overview";
+  });
   
   // Service filter for Inquiries & Requests tab: all | graduation | smart-homes | solutions
-  const [requestServiceFilter, setRequestServiceFilter] = useState<"all" | "graduation" | "smart-homes" | "solutions">("all");
+  const [requestServiceFilter, setRequestServiceFilterState] = useState<"all" | "graduation" | "smart-homes" | "solutions">(() => {
+    if (typeof window !== "undefined") {
+      const s = new URLSearchParams(window.location.search).get("service");
+      if (s === "graduation" || s === "smart-homes" || s === "solutions") {
+        return s;
+      }
+    }
+    return "all";
+  });
+
+  const setTab = useCallback((newTab: "overview" | "inquiries" | "customers" | "portfolio" | "smart-store") => {
+    setTabState(newTab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (newTab === "overview") {
+        url.searchParams.delete("tab");
+      } else {
+        url.searchParams.set("tab", newTab);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
+  const setRequestServiceFilter = useCallback((newService: "all" | "graduation" | "smart-homes" | "solutions") => {
+    setRequestServiceFilterState(newService);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (newService === "all") {
+        url.searchParams.delete("service");
+      } else {
+        url.searchParams.set("service", newService);
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
   const [engineeringRequests, setEngineeringRequests] = useState<StoredProjectRequest[]>([]);
   const [selectedProjectRequest, setSelectedProjectRequest] = useState<StoredProjectRequest | null>(null);
 
@@ -655,13 +700,13 @@ function Page() {
         if (search.trim()) {
           const q = search.toLowerCase();
           const match =
-            p.reference_number.toLowerCase().includes(q) ||
-            p.project_title.toLowerCase().includes(q) ||
-            p.full_name.toLowerCase().includes(q) ||
-            p.email.toLowerCase().includes(q) ||
-            (p.phone && p.phone.toLowerCase().includes(q)) ||
-            (p.university && p.university.toLowerCase().includes(q)) ||
-            (p.project_description && p.project_description.toLowerCase().includes(q));
+            (p.reference_number || "").toLowerCase().includes(q) ||
+            (p.project_title || "").toLowerCase().includes(q) ||
+            (p.full_name || "").toLowerCase().includes(q) ||
+            (p.email || "").toLowerCase().includes(q) ||
+            (p.phone ? String(p.phone).toLowerCase().includes(q) : false) ||
+            (p.university ? String(p.university).toLowerCase().includes(q) : false) ||
+            (p.project_description ? String(p.project_description).toLowerCase().includes(q) : false);
           if (!match) return false;
         }
         return true;
@@ -2557,7 +2602,7 @@ function Page() {
 
                   {filteredEngineeringRequests.map((p) => {
                     const statusObj = requestStatuses.find((s) => s.value === p.status);
-                    const whatsappUrl = p.whatsapp || p.phone ? `https://wa.me/${(p.whatsapp || p.phone).replace(/\D/g, "")}` : null;
+                    const whatsappUrl = p.whatsapp || p.phone ? `https://wa.me/${String(p.whatsapp || p.phone).replace(/\D/g, "")}` : null;
 
                     return (
                       <div

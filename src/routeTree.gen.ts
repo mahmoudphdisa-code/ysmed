@@ -23,6 +23,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
 import { Route as AuthenticatedAdminEngineeringRequestsRouteImport } from './routes/_authenticated/admin.engineering-requests'
+import { Route as AuthenticatedAdminInquiriesRouteImport } from './routes/_authenticated/admin.inquiries'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -94,6 +95,12 @@ const AuthenticatedAdminEngineeringRequestsRoute =
     path: '/engineering-requests',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminInquiriesRoute =
+  AuthenticatedAdminInquiriesRouteImport.update({
+    id: '/inquiries',
+    path: '/inquiries',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
+  '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -124,6 +132,7 @@ export interface FileRoutesByTo {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
   '/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
+  '/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -141,6 +150,7 @@ export interface FileRoutesById {
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
   '/_authenticated/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
+  '/_authenticated/admin/inquiries': typeof AuthenticatedAdminInquiriesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/admin/engineering-requests'
+    | '/admin/inquiries'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions'
     | '/admin/engineering-requests'
+    | '/admin/inquiries'
   id:
     | '__root__'
     | '/'
@@ -189,6 +201,7 @@ export interface FileRouteTypes {
     | '/solutions/$slug'
     | '/solutions/'
     | '/_authenticated/admin/engineering-requests'
+    | '/_authenticated/admin/inquiries'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -305,16 +318,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminEngineeringRequestsRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/inquiries': {
+      id: '/_authenticated/admin/inquiries'
+      path: '/inquiries'
+      fullPath: '/admin/inquiries'
+      preLoaderRoute: typeof AuthenticatedAdminInquiriesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminEngineeringRequestsRoute: typeof AuthenticatedAdminEngineeringRequestsRoute
+  AuthenticatedAdminInquiriesRoute: typeof AuthenticatedAdminInquiriesRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminEngineeringRequestsRoute:
     AuthenticatedAdminEngineeringRequestsRoute,
+  AuthenticatedAdminInquiriesRoute: AuthenticatedAdminInquiriesRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
