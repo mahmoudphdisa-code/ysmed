@@ -320,6 +320,441 @@ export type Database = {
         }
         Relationships: []
       }
+      services: {
+        Row: {
+          id: string
+          name_ar: string
+          name_en: string
+          slug: string
+          description_ar: string
+          description_en: string
+          icon: string
+          is_active: boolean
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name_ar: string
+          name_en: string
+          slug: string
+          description_ar: string
+          description_en: string
+          icon?: string
+          is_active?: boolean
+          order_index?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name_ar?: string
+          name_en?: string
+          slug?: string
+          description_ar?: string
+          description_en?: string
+          icon?: string
+          is_active?: boolean
+          order_index?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_requests: {
+        Row: {
+          id: string
+          reference_number: string
+          guest_access_token: string
+          customer_id: string | null
+          full_name: string
+          email: string
+          phone: string
+          whatsapp: string | null
+          user_type: string
+          university: string | null
+          department: string | null
+          project_title: string
+          project_category: string
+          project_description: string
+          objectives: string | null
+          required_features: string | null
+          current_stage: string
+          existing_technologies: string | null
+          technical_challenges: string | null
+          conditional_details: Json | null
+          deadline: string | null
+          urgency: string
+          budget_min: number | null
+          budget_max: number | null
+          budget_currency: string | null
+          preferred_contact_method: string | null
+          additional_notes: string | null
+          status: string
+          assigned_admin_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reference_number: string
+          guest_access_token?: string
+          customer_id?: string | null
+          full_name: string
+          email: string
+          phone: string
+          whatsapp?: string | null
+          user_type?: string
+          university?: string | null
+          department?: string | null
+          project_title: string
+          project_category: string
+          project_description: string
+          objectives?: string | null
+          required_features?: string | null
+          current_stage?: string
+          existing_technologies?: string | null
+          technical_challenges?: string | null
+          conditional_details?: Json | null
+          deadline?: string | null
+          urgency?: string
+          budget_min?: number | null
+          budget_max?: number | null
+          budget_currency?: string | null
+          preferred_contact_method?: string | null
+          additional_notes?: string | null
+          status?: string
+          assigned_admin_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reference_number?: string
+          guest_access_token?: string
+          customer_id?: string | null
+          full_name?: string
+          email?: string
+          phone?: string
+          whatsapp?: string | null
+          user_type?: string
+          university?: string | null
+          department?: string | null
+          project_title?: string
+          project_category?: string
+          project_description?: string
+          objectives?: string | null
+          required_features?: string | null
+          current_stage?: string
+          existing_technologies?: string | null
+          technical_challenges?: string | null
+          conditional_details?: Json | null
+          deadline?: string | null
+          urgency?: string
+          budget_min?: number | null
+          budget_max?: number | null
+          budget_currency?: string | null
+          preferred_contact_method?: string | null
+          additional_notes?: string | null
+          status?: string
+          assigned_admin_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_request_services: {
+        Row: {
+          id: string
+          project_request_id: string
+          service_id: string | null
+          service_slug: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          service_id?: string | null
+          service_slug: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          service_id?: string | null
+          service_slug?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_files: {
+        Row: {
+          id: string
+          project_request_id: string
+          uploaded_by: string | null
+          uploader_role: string
+          file_name: string
+          file_path: string
+          mime_type: string | null
+          file_size: number | null
+          file_category: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          uploaded_by?: string | null
+          uploader_role?: string
+          file_name: string
+          file_path: string
+          mime_type?: string | null
+          file_size?: number | null
+          file_category?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          uploaded_by?: string | null
+          uploader_role?: string
+          file_name?: string
+          file_path?: string
+          mime_type?: string | null
+          file_size?: number | null
+          file_category?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_messages: {
+        Row: {
+          id: string
+          project_request_id: string
+          sender_id: string | null
+          sender_name: string
+          sender_role: string
+          message: string
+          is_internal: boolean
+          attachment_url: string | null
+          attachment_name: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          sender_id?: string | null
+          sender_name: string
+          sender_role?: string
+          message: string
+          is_internal?: boolean
+          attachment_url?: string | null
+          attachment_name?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          sender_id?: string | null
+          sender_name?: string
+          sender_role?: string
+          message?: string
+          is_internal?: boolean
+          attachment_url?: string | null
+          attachment_name?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_status_history: {
+        Row: {
+          id: string
+          project_request_id: string
+          previous_status: string | null
+          new_status: string
+          notes: string | null
+          changed_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          previous_status?: string | null
+          new_status: string
+          notes?: string | null
+          changed_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          previous_status?: string | null
+          new_status?: string
+          notes?: string | null
+          changed_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_quotes: {
+        Row: {
+          id: string
+          project_request_id: string
+          quote_number: string
+          scope: string
+          deliverables: string
+          estimated_cost: number
+          currency: string
+          estimated_duration: string
+          terms: string | null
+          quote_status: string
+          created_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          quote_number: string
+          scope: string
+          deliverables: string
+          estimated_cost: number
+          currency?: string
+          estimated_duration: string
+          terms?: string | null
+          quote_status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          quote_number?: string
+          scope?: string
+          deliverables?: string
+          estimated_cost?: number
+          currency?: string
+          estimated_duration?: string
+          terms?: string | null
+          quote_status?: string
+          created_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      project_milestones: {
+        Row: {
+          id: string
+          project_request_id: string
+          title: string
+          description: string | null
+          status: string
+          due_date: string | null
+          completed_at: string | null
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_request_id: string
+          title: string
+          description?: string | null
+          status?: string
+          due_date?: string | null
+          completed_at?: string | null
+          order_index?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_request_id?: string
+          title?: string
+          description?: string | null
+          status?: string
+          due_date?: string | null
+          completed_at?: string | null
+          order_index?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      project_showcase: {
+        Row: {
+          id: string
+          title_ar: string
+          title_en: string
+          description_ar: string
+          description_en: string
+          category: string
+          technologies: string[]
+          image_path: string | null
+          video_url: string | null
+          is_published: boolean
+          order_index: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          title_ar: string
+          title_en: string
+          description_ar: string
+          description_en: string
+          category: string
+          technologies?: string[]
+          image_path?: string | null
+          video_url?: string | null
+          is_published?: boolean
+          order_index?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          title_ar?: string
+          title_en?: string
+          description_ar?: string
+          description_en?: string
+          category?: string
+          technologies?: string[]
+          image_path?: string | null
+          video_url?: string | null
+          is_published?: boolean
+          order_index?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      admin_notifications: {
+        Row: {
+          id: string
+          recipient_id: string | null
+          project_request_id: string | null
+          notification_type: string
+          title: string
+          content: string | null
+          is_read: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          recipient_id?: string | null
+          project_request_id?: string | null
+          notification_type: string
+          title: string
+          content?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          recipient_id?: string | null
+          project_request_id?: string | null
+          notification_type?: string
+          title?: string
+          content?: string | null
+          is_read?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -342,6 +777,24 @@ export type Database = {
         Args: {
           p_product_id: string
           p_quantity: number
+        }
+        Returns: Json
+      }
+      verify_guest_project: {
+        Args: {
+          p_reference: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      guest_send_message: {
+        Args: {
+          p_reference: string
+          p_token: string
+          p_sender_name: string
+          p_message: string
+          p_attachment_url?: string
+          p_attachment_name?: string
         }
         Returns: Json
       }
