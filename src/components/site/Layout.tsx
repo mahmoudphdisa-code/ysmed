@@ -2,7 +2,6 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Menu, X, Globe, ChevronRight, ChevronDown, User, Sparkles, GraduationCap, Cpu, Phone, Info } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
-import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -350,9 +349,6 @@ export function Navbar() {
             <User className="size-4" />
             {hasSession ? t("account") : t("login")}
           </Link>
-          <Button asChild variant="hero" size="sm" className="rounded-full px-4">
-            <Link to="/engineering-services">{t("request")}</Link>
-          </Button>
         </div>
 
         {/* Mobile hamburger */}
@@ -495,11 +491,6 @@ export function Navbar() {
                 {hasSession ? t("account") : t("login")}
               </Link>
             </div>
-            <Button asChild variant="hero" className="w-full rounded-xl">
-              <Link to="/request" onClick={close}>
-                {t("request")}
-              </Link>
-            </Button>
           </div>
         </div>
       </div>
