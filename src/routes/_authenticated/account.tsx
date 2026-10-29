@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
+import { clearLocalProjects } from "@/services/engineeringService";
 
 export const Route = createFileRoute("/_authenticated/account")({
   head: () => ({
@@ -183,6 +184,7 @@ function Page() {
   // Logout
   const logout = async () => {
     try {
+      clearLocalProjects();
       await supabase.auth.signOut();
       toast.success(lang === "ar" ? "تم تسجيل الخروج بنجاح" : "Signed out successfully");
       navigate({ to: "/auth", replace: true });

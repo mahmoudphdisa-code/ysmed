@@ -258,12 +258,14 @@ export function Navbar() {
             )}
           </div>
 
-          <Link
-            to="/my-projects"
-            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
-          >
-            {t("myProjects")}
-          </Link>
+          {hasSession && (
+            <Link
+              to="/my-projects"
+              className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+            >
+              {t("myProjects")}
+            </Link>
+          )}
           <a
             href="/#company-profile"
             className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -423,14 +425,16 @@ export function Navbar() {
               )}
             </div>
 
-            <Link
-              to="/my-projects"
-              onClick={close}
-              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
-            >
-              <span>{t("myProjects")}</span>
-              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
-            </Link>
+            {hasSession && (
+              <Link
+                to="/my-projects"
+                onClick={close}
+                className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+              >
+                <span>{t("myProjects")}</span>
+                <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+              </Link>
+            )}
             <a
               href="/#company-profile"
               onClick={close}
@@ -505,6 +509,20 @@ export function Navbar() {
 
 export function Footer() {
   const { t } = useI18n();
+  const [hasSession, setHasSession] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setHasSession(!!session);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setHasSession(!!session);
+    });
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <footer className="border-t bg-surface/40">
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
@@ -521,15 +539,17 @@ export function Footer() {
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Navigation
             </p>
-            {nav.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                className="w-fit text-muted-foreground transition-colors hover:text-primary"
-              >
-                {t(n.k)}
-              </Link>
-            ))}
+            {nav
+              .filter((n) => n.to !== "/my-projects" || hasSession)
+              .map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className="w-fit text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {t(n.k)}
+                </Link>
+              ))}
           </div>
 
           {/* CTA */}
@@ -543,12 +563,14 @@ export function Footer() {
             >
               {t("engineeringServices")} →
             </Link>
-            <Link
-              to="/my-projects"
-              className="w-fit text-muted-foreground transition-colors hover:text-primary"
-            >
-              {t("myProjects")}
-            </Link>
+            {hasSession && (
+              <Link
+                to="/my-projects"
+                className="w-fit text-muted-foreground transition-colors hover:text-primary"
+              >
+                {t("myProjects")}
+              </Link>
+            )}
             <Link
               to="/contact"
               className="w-fit text-muted-foreground transition-colors hover:text-primary"

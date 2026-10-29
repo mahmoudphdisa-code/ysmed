@@ -10,7 +10,12 @@ import {
   processTimeline,
   requestStatuses,
 } from "@/data/engineeringData";
-import { generateReferenceNumber, generateAccessToken } from "@/services/engineeringService";
+import {
+  generateReferenceNumber,
+  generateAccessToken,
+  fetchCustomerProjects,
+  clearLocalProjects,
+} from "@/services/engineeringService";
 
 describe("App routing", () => {
   const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });

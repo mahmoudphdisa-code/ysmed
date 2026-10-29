@@ -130,6 +130,15 @@ function saveLocalProjects(projects: StoredProjectRequest[]) {
   }
 }
 
+export function clearLocalProjects() {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(LOCAL_STORAGE_KEY);
+  } catch (err) {
+    console.error("Local storage clear error:", err);
+  }
+}
+
 export function generateReferenceNumber(): string {
   const year = new Date().getFullYear();
   const rand = Math.floor(1000 + Math.random() * 9000);
@@ -527,39 +536,40 @@ export async function fetchProjectDetails(
 export async function fetchCustomerProjects(userId?: string): Promise<StoredProjectRequest[]> {
   const result: StoredProjectRequest[] = [];
 
-  if (userId) {
-    try {
-      const { data, error } = await supabase
-        .from("project_requests" as any)
-        .select("*")
-        .eq("customer_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        for (const row of data as any[]) {
-          result.push({
-            ...row,
-            services: [],
-            files: [],
-            messages: [],
-            history: [],
-            quotes: [],
-            milestones: [],
-          });
-        }
-      }
-    } catch {
-      // fallback
-    }
+  if (!userId) {
+    // If not logged in, return empty array to prevent unauthorized/guest leakage
+    return [];
   }
 
-  // Merge with any projects in localStorage
+  try {
+    const { data, error } = await supabase
+      .from("project_requests" as any)
+      .select("*")
+      .eq("customer_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      for (const row of data as any[]) {
+        result.push({
+          ...row,
+          services: [],
+          files: [],
+          messages: [],
+          history: [],
+          quotes: [],
+          milestones: [],
+        });
+      }
+    }
+  } catch {
+    // fallback
+  }
+
+  // Merge with any projects in localStorage that explicitly belong to this user
   const locals = getLocalProjects();
   for (const lp of locals) {
-    if (!result.some((r) => r.reference_number === lp.reference_number)) {
-      if (!userId || lp.customer_id === userId || !lp.customer_id) {
-        result.push(lp);
-      }
+    if (lp.customer_id === userId && !result.some((r) => r.reference_number === lp.reference_number)) {
+      result.push(lp);
     }
   }
 

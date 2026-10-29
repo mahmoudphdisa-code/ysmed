@@ -44,6 +44,7 @@ import {
   fetchCustomerProjects,
   sendCustomerMessage,
   respondToQuotation,
+  clearLocalProjects,
   type StoredProjectRequest,
 } from "@/services/engineeringService";
 import { requestStatuses } from "@/data/engineeringData";
@@ -102,6 +103,7 @@ export function Page() {
   const [lookupRef, setLookupRef] = useState(search.ref || "");
   const [lookupToken, setLookupToken] = useState(search.token || "");
   const [lookupLoading, setLookupLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   // Loaded active project & user projects
   const [activeProject, setActiveProject] = useState<StoredProjectRequest | null>(null);
@@ -116,68 +118,97 @@ export function Page() {
   // Copy states
   const [copiedRef, setCopiedRef] = useState(false);
 
-  // Load user session, projects, and inquiries on mount
+  // Select project and load full details
+  const handleSelectProject = async (p: StoredProjectRequest) => {
+    setActiveProject(p);
+    try {
+      const full = await fetchProjectDetails(p.reference_number, p.guest_access_token);
+      if (full) setActiveProject(full);
+    } catch (err) {
+      console.error("Error loading full project details:", err);
+    }
+  };
+
+  // Load user session, projects, and inquiries on mount + realtime auth listener
   useEffect(() => {
     let active = true;
 
-    (async () => {
+    const loadUserData = async (userId: string) => {
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (active && authData?.user) {
-          setAuthUserId(authData.user.id);
-          const [projects, inqRes] = await Promise.all([
-            fetchCustomerProjects(authData.user.id),
-            supabase
-              .from("inquiries")
-              .select("*")
-              .order("created_at", { ascending: false }),
-          ]);
+        const [projects, inqRes] = await Promise.all([
+          fetchCustomerProjects(userId),
+          supabase
+            .from("inquiries")
+            .select("*")
+            .eq("user_id", userId)
+            .order("created_at", { ascending: false }),
+        ]);
 
-          if (active) {
-            if (projects && projects.length > 0) {
-              setUserProjectsList(projects);
-              if (!search.ref && projects[0]) {
-                setActiveProject(projects[0]);
-              }
-            }
-            if (inqRes.data) {
-              setInquiries(inqRes.data as Inquiry[]);
-            }
+        if (!active) return;
+
+        if (projects && projects.length > 0) {
+          setUserProjectsList(projects);
+          const target = search.ref
+            ? projects.find((p) => p.reference_number.toUpperCase() === search.ref?.toUpperCase()) || projects[0]
+            : projects[0];
+
+          if (target) {
+            const full = await fetchProjectDetails(target.reference_number, target.guest_access_token);
+            if (active) setActiveProject(full || target);
           }
         } else {
-          // Check local stored projects
-          const localList = await fetchCustomerProjects();
-          if (active && localList.length > 0) {
-            setUserProjectsList(localList);
-          }
+          setUserProjectsList([]);
+          setActiveProject(null);
         }
 
-        // If search params provided, load specified project
-        if (search.ref) {
-          setLookupLoading(true);
-          const p = await fetchProjectDetails(search.ref, search.token);
-          if (active) {
-            if (p) {
-              setActiveProject(p);
-              setActiveMainTab("graduation");
-            } else {
-              toast.error(
-                isAr
-                  ? "لم يتم العثور على مشروع بهذا الرقم أو الرمز"
-                  : "No project found with these credentials"
-              );
-            }
-            setLookupLoading(false);
-          }
+        if (inqRes.data) {
+          setInquiries(inqRes.data as Inquiry[]);
+        } else {
+          setInquiries([]);
         }
       } catch (err) {
-        console.error(err);
-        if (active) setLookupLoading(false);
+        console.error("Error loading user requests:", err);
+      } finally {
+        if (active) setAuthLoading(false);
       }
-    })();
+    };
+
+    // Initial session check
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!active) return;
+      if (session?.user) {
+        setAuthUserId(session.user.id);
+        await loadUserData(session.user.id);
+      } else {
+        setAuthUserId(null);
+        setUserProjectsList([]);
+        setInquiries([]);
+        setActiveProject(null);
+        clearLocalProjects();
+        setAuthLoading(false);
+      }
+    });
+
+    // Realtime auth listener: instantly updates and wipes requests on logout
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!active) return;
+      if (event === "SIGNED_OUT" || !session?.user) {
+        setAuthUserId(null);
+        setUserProjectsList([]);
+        setInquiries([]);
+        setActiveProject(null);
+        clearLocalProjects();
+        setAuthLoading(false);
+      } else if (session?.user) {
+        setAuthUserId(session.user.id);
+        setAuthLoading(true);
+        await loadUserData(session.user.id);
+      }
+    });
 
     return () => {
       active = false;
+      subscription.unsubscribe();
     };
   }, [search.ref, search.token]);
 
@@ -328,6 +359,51 @@ export function Page() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="relative min-h-[70vh] flex flex-col items-center justify-center gap-3 pt-24">
+        <div className="size-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <p className="text-sm font-medium text-muted-foreground">
+          {isAr ? "جاري التحقق من الحساب وتحميل الطلبات..." : "Checking authentication & loading requests..."}
+        </p>
+      </div>
+    );
+  }
+
+  if (!authUserId) {
+    return (
+      <div className="relative min-h-[80vh] flex items-center justify-center px-4 py-24 sm:px-6">
+        <div className="circuit-grid fixed inset-0 pointer-events-none opacity-30 z-0" />
+        <div className="relative z-10 mx-auto max-w-lg text-center glass rounded-3xl p-8 sm:p-12 glow-border space-y-6">
+          <div className="mx-auto flex size-20 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-glow">
+            <ShieldCheck className="size-10" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold sm:text-3xl text-foreground">
+              {isAr ? "تسجيل الدخول مطلوب لعرض طلباتك" : "Authentication Required to View Requests"}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              {isAr
+                ? "صفحة 'طلباتي' متاحة للمستخدمين المسجلين فقط لمتابعة طلبات مشاريع التخرج، المنازل الذكية، والحلول المبتكرة بأمان وسرية."
+                : "'My Requests' is exclusively available for authenticated users to securely track their Graduation Projects, Smart Homes, and Innovative Solutions requests."}
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild variant="hero" className="rounded-xl shadow-glow gap-2 px-6">
+              <Link to="/auth">
+                <LogIn className="size-4" />
+                <span>{isAr ? "تسجيل الدخول / إنشاء حساب" : "Sign In / Register"}</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="rounded-xl">
+              <Link to="/">{isAr ? "العودة للرئيسية" : "Back to Home"}</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen px-4 pb-20 pt-20 sm:px-6 sm:pt-28">
       <div className="circuit-grid fixed inset-0 pointer-events-none opacity-30 z-0" />
@@ -359,30 +435,6 @@ export function Page() {
             </Button>
           </div>
         </div>
-
-        {/* Guest Banner if not logged in */}
-        {!authUserId && (
-          <div className="mt-6 rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                <LogIn className="size-5" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-foreground">
-                  {isAr ? "سجّل الدخول لعرض جميع طلباتك في مكان واحد" : "Sign In to Access All Your Requests"}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isAr
-                    ? "يتيح لك تسجيل الدخول استعراض كافة طلباتك ومقايساتك عبر الأقسام الثلاثة بسهولة."
-                    : "Logging in enables full tracking of your Graduation Projects, Smart Homes quotes, and Solution inquiries."}
-                </p>
-              </div>
-            </div>
-            <Button asChild variant="hero" size="sm" className="rounded-xl shrink-0">
-              <Link to="/auth">{isAr ? "تسجيل الدخول / إنشاء حساب" : "Sign In / Register"}</Link>
-            </Button>
-          </div>
-        )}
 
         {/* ─── 3 PRIMARY TABS ──────────────────────────────────────────────── */}
         <div className="mt-8 flex flex-wrap items-center gap-2.5 border-b border-border/60 pb-3">
@@ -513,7 +565,7 @@ export function Page() {
                     <button
                       key={p.reference_number}
                       type="button"
-                      onClick={() => setActiveProject(p)}
+                      onClick={() => handleSelectProject(p)}
                       className={`rounded-lg px-2.5 py-1 text-xs font-mono transition-all border cursor-pointer ${
                         activeProject?.reference_number === p.reference_number
                           ? "border-primary bg-primary/20 text-primary font-bold shadow-glow"
