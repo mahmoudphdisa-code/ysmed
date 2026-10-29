@@ -5,10 +5,10 @@ export type L = { en: string; ar: string };
 
 const dict = {
   home: { en: "Home", ar: "الرئيسية" },
-  engineeringServices: { en: "Engineering Services", ar: "الخدمات الهندسية" },
-  myProjects: { en: "My Projects", ar: "مشاريعي" },
+  engineeringServices: { en: "Graduation Project Services", ar: "خدمات مشاريع التخرج" },
+  myProjects: { en: "My Requests", ar: "طلباتي" },
   smartHomes: { en: "Smart Homes", ar: "المنازل الذكية" },
-  solutions: { en: "Our Solutions", ar: "حلولنا" },
+  solutions: { en: "Innovative Solutions", ar: "الحلول المبتكرة" },
   projects: { en: "Projects", ar: "المشاريع" },
   about: { en: "About Us", ar: "من نحن" },
   contact: { en: "Contact Us", ar: "تواصل معنا" },

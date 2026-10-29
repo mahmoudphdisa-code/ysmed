@@ -276,7 +276,7 @@ function Page() {
               <Button asChild variant="hero" size="sm" className="rounded-xl shadow-glow gap-1.5">
                 <Link to="/my-projects">
                   <FileText className="size-4" />
-                  <span>{lang === "ar" ? "مشاريعي الهندسية" : "My Projects"}</span>
+                  <span>{t("myProjects")}</span>
                 </Link>
               </Button>
               {isAdmin && (

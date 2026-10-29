@@ -7,9 +7,9 @@ import { SolutionCard } from "./index";
 export const Route = createFileRoute("/solutions/")({
   head: () => ({
     meta: [
-      { title: "Our Solutions — YSMED" },
+      { title: "Innovative Solutions — YSMED" },
       { name: "description", content: "Smart agriculture, industry, healthcare, aquaculture, poultry, solar, wind, smart buildings, stabilizers and UPS." },
-      { property: "og:title", content: "Our Solutions — YSMED" },
+      { property: "og:title", content: "Innovative Solutions — YSMED" },
       { property: "og:description", content: "Ten industries, one integrated engineering partner." },
     ],
   }),

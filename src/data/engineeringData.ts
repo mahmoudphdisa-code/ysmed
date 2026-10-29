@@ -433,8 +433,8 @@ export const faqList: FAQItem[] = [
     id: "faq-6",
     qAr: "هل أستطيع متابعة مراحل تنفيذ مشروعي والتواصل مع المهندس المسؤول؟",
     qEn: "Can I track my project's progress and communicate directly with the engineering team?",
-    aAr: "نعم، نوفر لك بوابة عملاء مخصصة 'مشاريعي' (My Projects)، تتيح لك متابعة التحديثات اللحظية، والاطلاع على مراحل الإنجاز (Milestones)، وتبادل الرسائل والملفات مع الفريق الهندسي في محادثة موثقة وسريعة.",
-    aEn: "Yes! You will have access to a dedicated 'My Projects' portal where you can monitor real-time progress, view milestone completions, approve quotations, and exchange direct messages and files with the engineering team.",
+    aAr: "نعم، نوفر لك بوابة عملاء مخصصة 'طلباتي' (My Requests)، تتيح لك متابعة التحديثات اللحظية، والاطلاع على مراحل الإنجاز (Milestones)، وتبادل الرسائل والملفات مع الفريق الهندسي في محادثة موثقة وسريعة.",
+    aEn: "Yes! You will have access to a dedicated 'My Requests' portal where you can monitor real-time progress, view milestone completions, approve quotations, and exchange direct messages and files with the engineering team.",
   },
   {
     id: "faq-7",
