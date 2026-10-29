@@ -1,17 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Menu, X, Globe, ChevronRight, ChevronDown, User, Sparkles, GraduationCap, Cpu } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 
 const serviceItems = [
   {
@@ -71,11 +65,31 @@ export function Navbar() {
   const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [hasSession, setHasSession] = useState(false);
 
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isServicesActive =
     pathname.startsWith("/engineering-services") ||
     pathname.startsWith("/smart-homes") ||
     pathname.startsWith("/solutions");
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setServicesOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setServicesOpen(false);
+    }, 150);
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -86,7 +100,20 @@ export function Navbar() {
       setHasSession(!!session);
     });
 
-    return () => subscription.unsubscribe();
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setServicesOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+
+    return () => {
+      subscription.unsubscribe();
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
   const close = () => {
@@ -113,47 +140,50 @@ export function Navbar() {
             {t("home")}
           </Link>
 
-          {/* Services Dropdown */}
+          {/* Services Dropdown (Smooth, Flicker-Free Hover & Click) */}
           <div
+            ref={dropdownRef}
             className="relative"
-            onMouseEnter={() => setServicesOpen(true)}
-            onMouseLeave={() => setServicesOpen(false)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
           >
-            <DropdownMenu open={servicesOpen} onOpenChange={setServicesOpen}>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all hover:text-primary outline-none cursor-pointer",
-                    isServicesActive
-                      ? "bg-primary/10 text-primary border border-primary/30 font-bold"
-                      : "text-muted-foreground hover:text-foreground border border-transparent"
-                  )}
-                  aria-expanded={servicesOpen}
-                >
-                  <Sparkles className="size-3.5 text-primary" />
-                  <span>{t("services")}</span>
-                  <ChevronDown
-                    className={cn(
-                      "size-3.5 text-muted-foreground transition-transform duration-200",
-                      servicesOpen && "rotate-180"
-                    )}
-                  />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                sideOffset={8}
-                className="w-80 glass border-border/80 bg-background/95 backdrop-blur-xl p-2 rounded-2xl shadow-2xl space-y-1 z-50 animate-in fade-in-0 zoom-in-95"
-              >
-                {serviceItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <DropdownMenuItem key={item.to} asChild className="focus:bg-transparent p-0">
+            <button
+              type="button"
+              onClick={() => setServicesOpen((v) => !v)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all hover:text-primary outline-none cursor-pointer select-none",
+                isServicesActive
+                  ? "bg-primary/10 text-primary border border-primary/30 font-bold"
+                  : "text-muted-foreground hover:text-foreground border border-transparent"
+              )}
+              aria-expanded={servicesOpen}
+              aria-haspopup="true"
+            >
+              <Sparkles className="size-3.5 text-primary" />
+              <span>{t("services")}</span>
+              <ChevronDown
+                className={cn(
+                  "size-3.5 text-muted-foreground transition-transform duration-200",
+                  servicesOpen && "rotate-180"
+                )}
+              />
+            </button>
+
+            {/* In-tree hover panel with seamless bridge (pt-2) */}
+            {servicesOpen && (
+              <div className="absolute start-0 top-full pt-2 z-50">
+                <div className="w-80 glass border-border/80 bg-background/95 backdrop-blur-xl p-2 rounded-2xl shadow-2xl space-y-1 animate-in fade-in-0 zoom-in-95 duration-150">
+                  {serviceItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
                       <Link
+                        key={item.to}
                         to={item.to}
-                        onClick={() => setServicesOpen(false)}
-                        className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-surface/80 cursor-pointer outline-none w-full"
+                        onClick={() => {
+                          setServicesOpen(false);
+                          close();
+                        }}
+                        className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-surface/80 cursor-pointer outline-none w-full text-start"
                       >
                         <div
                           className={cn(
@@ -172,11 +202,11 @@ export function Navbar() {
                           </span>
                         </div>
                       </Link>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           <Link
