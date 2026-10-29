@@ -8,8 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const nav = [
   { to: "/", k: "home" },
+  { to: "/engineering-services", k: "engineeringServices", isHighlighted: true },
   { to: "/smart-homes", k: "smartHomes", isSpecial: true },
   { to: "/solutions", k: "solutions" },
+  { to: "/my-projects", k: "myProjects" },
   { to: "/about", k: "about" },
   { to: "/contact", k: "contact" },
 ] as const;
@@ -65,6 +67,13 @@ export function Navbar() {
             {t("home")}
           </Link>
           <Link
+            to="/engineering-services"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold text-foreground transition-all hover:text-primary data-[status=active]:text-primary data-[status=active]:bg-primary/10 border border-transparent data-[status=active]:border-primary/30"
+          >
+            <Sparkles className="size-3.5 text-primary" />
+            <span>{t("engineeringServices")}</span>
+          </Link>
+          <Link
             to="/smart-homes"
             className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold text-foreground transition-all hover:text-primary data-[status=active]:text-primary data-[status=active]:bg-primary/10 border border-transparent data-[status=active]:border-primary/30"
           >
@@ -76,6 +85,12 @@ export function Navbar() {
             className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
           >
             {t("solutions")}
+          </Link>
+          <Link
+            to="/my-projects"
+            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
+          >
+            {t("myProjects")}
           </Link>
           <a
             href="/#company-profile"
@@ -108,7 +123,7 @@ export function Navbar() {
             {hasSession ? t("account") : t("login")}
           </Link>
           <Button asChild variant="hero" size="sm" className="rounded-full px-4">
-            <Link to="/request">{t("request")}</Link>
+            <Link to="/engineering-services">{t("request")}</Link>
           </Button>
         </div>
 
@@ -213,10 +228,16 @@ export function Footer() {
               Get Started
             </p>
             <Link
-              to="/request"
-              className="w-fit text-primary transition-colors hover:underline"
+              to="/engineering-services"
+              className="w-fit text-primary font-bold transition-colors hover:underline"
             >
-              {t("request")} →
+              {t("engineeringServices")} →
+            </Link>
+            <Link
+              to="/my-projects"
+              className="w-fit text-muted-foreground transition-colors hover:text-primary"
+            >
+              {t("myProjects")}
             </Link>
             <Link
               to="/contact"

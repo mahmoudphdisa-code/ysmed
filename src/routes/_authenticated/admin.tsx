@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { toast } from "sonner";
 import {
@@ -1480,7 +1480,14 @@ function Page() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button asChild variant="hero" size="sm" className="rounded-xl shadow-glow gap-1.5 font-bold">
+              <Link to="/admin/engineering-requests">
+                <Sparkles className="size-3.5" />
+                <span>{lang === "ar" ? "طلبات النماذج والمشاريع الهندسية" : "Engineering Prototyping Requests"}</span>
+              </Link>
+            </Button>
+
             <Button
               variant="outline"
               size="sm"

@@ -14,12 +14,15 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as EngineeringServicesRouteImport } from './routes/engineering-services'
+import { Route as MyProjectsRouteImport } from './routes/my-projects'
 import { Route as RequestRouteImport } from './routes/request'
 import { Route as SmartHomesRouteImport } from './routes/smart-homes'
 import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as SolutionsIndexRouteImport } from './routes/solutions.index'
 import { Route as SolutionsSlugRouteImport } from './routes/solutions.$slug'
+import { Route as AuthenticatedAdminEngineeringRequestsRouteImport } from './routes/_authenticated/admin.engineering-requests'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -43,6 +46,16 @@ const AuthRoute = AuthRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EngineeringServicesRoute = EngineeringServicesRouteImport.update({
+  id: '/engineering-services',
+  path: '/engineering-services',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MyProjectsRoute = MyProjectsRouteImport.update({
+  id: '/my-projects',
+  path: '/my-projects',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RequestRoute = RequestRouteImport.update({
@@ -75,30 +88,42 @@ const SolutionsSlugRoute = SolutionsSlugRouteImport.update({
   path: '/solutions/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminEngineeringRequestsRoute =
+  AuthenticatedAdminEngineeringRequestsRouteImport.update({
+    id: '/engineering-requests',
+    path: '/engineering-requests',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/engineering-services': typeof EngineeringServicesRoute
+  '/my-projects': typeof MyProjectsRoute
   '/request': typeof RequestRoute
   '/smart-homes': typeof SmartHomesRoute
   '/account': typeof AuthenticatedAccountRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/engineering-services': typeof EngineeringServicesRoute
+  '/my-projects': typeof MyProjectsRoute
   '/request': typeof RequestRoute
   '/smart-homes': typeof SmartHomesRoute
   '/account': typeof AuthenticatedAccountRoute
-  '/admin': typeof AuthenticatedAdminRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions': typeof SolutionsIndexRoute
+  '/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -107,12 +132,15 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/auth': typeof AuthRoute
   '/contact': typeof ContactRoute
+  '/engineering-services': typeof EngineeringServicesRoute
+  '/my-projects': typeof MyProjectsRoute
   '/request': typeof RequestRoute
   '/smart-homes': typeof SmartHomesRoute
   '/_authenticated/account': typeof AuthenticatedAccountRoute
-  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/solutions/$slug': typeof SolutionsSlugRoute
   '/solutions/': typeof SolutionsIndexRoute
+  '/_authenticated/admin/engineering-requests': typeof AuthenticatedAdminEngineeringRequestsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -121,24 +149,30 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
+    | '/engineering-services'
+    | '/my-projects'
     | '/request'
     | '/smart-homes'
     | '/account'
     | '/admin'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/admin/engineering-requests'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/auth'
     | '/contact'
+    | '/engineering-services'
+    | '/my-projects'
     | '/request'
     | '/smart-homes'
     | '/account'
     | '/admin'
     | '/solutions/$slug'
     | '/solutions'
+    | '/admin/engineering-requests'
   id:
     | '__root__'
     | '/'
@@ -146,12 +180,15 @@ export interface FileRouteTypes {
     | '/about'
     | '/auth'
     | '/contact'
+    | '/engineering-services'
+    | '/my-projects'
     | '/request'
     | '/smart-homes'
     | '/_authenticated/account'
     | '/_authenticated/admin'
     | '/solutions/$slug'
     | '/solutions/'
+    | '/_authenticated/admin/engineering-requests'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -160,6 +197,8 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AuthRoute: typeof AuthRoute
   ContactRoute: typeof ContactRoute
+  EngineeringServicesRoute: typeof EngineeringServicesRoute
+  MyProjectsRoute: typeof MyProjectsRoute
   RequestRoute: typeof RequestRoute
   SmartHomesRoute: typeof SmartHomesRoute
   SolutionsSlugRoute: typeof SolutionsSlugRoute
@@ -201,6 +240,20 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/engineering-services': {
+      id: '/engineering-services'
+      path: '/engineering-services'
+      fullPath: '/engineering-services'
+      preLoaderRoute: typeof EngineeringServicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/my-projects': {
+      id: '/my-projects'
+      path: '/my-projects'
+      fullPath: '/my-projects'
+      preLoaderRoute: typeof MyProjectsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/request': {
@@ -245,17 +298,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SolutionsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/engineering-requests': {
+      id: '/_authenticated/admin/engineering-requests'
+      path: '/engineering-requests'
+      fullPath: '/admin/engineering-requests'
+      preLoaderRoute: typeof AuthenticatedAdminEngineeringRequestsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminEngineeringRequestsRoute: typeof AuthenticatedAdminEngineeringRequestsRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminEngineeringRequestsRoute:
+    AuthenticatedAdminEngineeringRequestsRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
-  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountRoute: AuthenticatedAccountRoute,
-  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -267,6 +339,8 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AuthRoute: AuthRoute,
   ContactRoute: ContactRoute,
+  EngineeringServicesRoute: EngineeringServicesRoute,
+  MyProjectsRoute: MyProjectsRoute,
   RequestRoute: RequestRoute,
   SmartHomesRoute: SmartHomesRoute,
   SolutionsSlugRoute: SolutionsSlugRoute,

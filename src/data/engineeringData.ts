@@ -6,6 +6,7 @@ export interface EngineeringServiceItem {
   shortDescAr: string;
   shortDescEn: string;
   icon: string;
+  image: string;
   highlightAr: string;
   highlightEn: string;
   featuresAr: string[];
@@ -22,6 +23,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "إشراف ودعم فني استشاري وتنفيذي لمشاريع تخرج كليات الهندسة والحاسبات والذكاء الاصطناعي.",
     shortDescEn: "Comprehensive mentorship and technical support for engineering and computer science graduation projects.",
     icon: "GraduationCap",
+    image: "/images/services/grad-projects.jpg",
     highlightAr: "توجيه معماري وتصحيح أخطاء وتكامل عملي",
     highlightEn: "Architecture guidance, debugging & practical integration",
     featuresAr: [
@@ -50,6 +52,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "تصميم الدوائر الإلكترونية، برمجة المتحكمات الدقيقة، أنظمة IoT، الروبوتات، وبوردات PCB.",
     shortDescEn: "Electronic circuit design, microcontroller programming, IoT systems, robotics, and custom PCBs.",
     icon: "Cpu",
+    image: "/images/services/hardware-eng.jpg",
     highlightAr: "Arduino, ESP32, STM32, ARM, PCB Design",
     highlightEn: "Arduino, ESP32, STM32, ARM & PCB Layouts",
     featuresAr: [
@@ -78,6 +81,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "تطبيقات ويب وموبايل فائقة السرعة، أنظمة الذكاء الاصطناعي، الرؤية الحاسوبية، ولوحات التحكم.",
     shortDescEn: "Ultra-fast web & mobile applications, applied AI, computer vision, and telemetry dashboards.",
     icon: "Code2",
+    image: "/images/services/software-dev.jpg",
     highlightAr: "Web, Mobile, AI/ML, Computer Vision & Cloud APIs",
     highlightEn: "Web, Mobile, AI/ML, Computer Vision & Cloud APIs",
     featuresAr: [
@@ -106,6 +110,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "توريد المكونات، تصنيع ولحام بوردات PCB، طباعة هياكل 3D، وتجميع النظام بالكامل مع الاختبار.",
     shortDescEn: "Component procurement, PCB fabrication, SMT assembly, 3D printed enclosures, and final QA.",
     icon: "Factory",
+    image: "/images/services/manufacturing.jpg",
     highlightAr: "تصنيع حقيقي من الدائرة إلى الهيكل الخارجي",
     highlightEn: "End-to-end fabrication from circuits to custom enclosures",
     featuresAr: [
@@ -134,6 +139,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "تحويل الأفكار الإبداعية والابتكارات لطلاب، باحثين، رواد أعمال، وشركات إلى نماذج حقيقية تعمل.",
     shortDescEn: "Transforming innovative ideas into working hardware and software proofs of concept and MVPs.",
     icon: "Sparkles",
+    image: "/images/services/prototyping.jpg",
     highlightAr: "من الفكرة على الورق إلى نموذج حي يعمل ومقنع للمستثمرين",
     highlightEn: "From napkin sketch to an investor-ready functional prototype",
     featuresAr: [
@@ -162,6 +168,7 @@ export const engineeringServices: EngineeringServiceItem[] = [
     shortDescAr: "جلسات استشارية هندسية متخصصة، تدقيق المشاريع، فحص الأعطال المعقدة، ورفع كفاءة الأداء.",
     shortDescEn: "Specialized engineering consultations, system audits, deep debugging, and performance optimization.",
     icon: "Wrench",
+    image: "/images/services/consulting.jpg",
     highlightAr: "حلول دقيقة للمشاكل المستعصية والتشويش والبرمجة",
     highlightEn: "Precision solutions for elusive bugs, electrical noise & stability",
     featuresAr: [

@@ -273,6 +273,12 @@ function Page() {
 
             {/* Header Action Buttons */}
             <div className="flex flex-wrap items-center gap-2.5 sm:self-center">
+              <Button asChild variant="hero" size="sm" className="rounded-xl shadow-glow gap-1.5">
+                <Link to="/my-projects">
+                  <FileText className="size-4" />
+                  <span>{lang === "ar" ? "مشاريعي الهندسية" : "My Projects"}</span>
+                </Link>
+              </Button>
               {isAdmin && (
                 <Button asChild variant="gold" size="sm" className="rounded-xl shadow-glow">
                   <Link to="/admin">

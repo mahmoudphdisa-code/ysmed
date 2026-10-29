@@ -4,27 +4,27 @@ export interface ProjectSubmissionPayload {
   fullName: string;
   email: string;
   phone: string;
-  whatsapp?: string;
+  whatsapp?: string | undefined;
   userType: string;
-  university?: string;
-  department?: string;
+  university?: string | undefined;
+  department?: string | undefined;
   projectTitle: string;
   projectCategory: string;
   projectDescription: string;
-  objectives?: string;
-  requiredFeatures?: string;
+  objectives?: string | undefined;
+  requiredFeatures?: string | undefined;
   currentStage: string;
-  existingTechnologies?: string;
-  technicalChallenges?: string;
-  conditionalDetails?: Record<string, any>;
+  existingTechnologies?: string | undefined;
+  technicalChallenges?: string | undefined;
+  conditionalDetails?: Record<string, any> | undefined;
   services: string[];
-  deadline?: string;
+  deadline?: string | undefined;
   urgency: string;
-  budgetMin?: number;
-  budgetMax?: number;
-  preferredContactMethod?: string;
-  additionalNotes?: string;
-  files?: File[];
+  budgetMin?: number | undefined;
+  budgetMax?: number | undefined;
+  preferredContactMethod?: string | undefined;
+  additionalNotes?: string | undefined;
+  files?: File[] | undefined;
 }
 
 export interface StoredProjectRequest {
@@ -651,10 +651,10 @@ export async function sendCustomerMessage(
 
 function updateLocalMessage(reference: string, msg: any) {
   const list = getLocalProjects();
-  const idx = list.findIndex((p) => p.reference_number === reference);
-  if (idx !== -1) {
-    if (!list[idx].messages) list[idx].messages = [];
-    list[idx].messages?.push(msg);
+  const target = list.find((p) => p.reference_number === reference);
+  if (target) {
+    if (!target.messages) target.messages = [];
+    target.messages.push(msg);
     saveLocalProjects(list);
   }
 }
@@ -683,15 +683,16 @@ export async function respondToQuotation(
   }
 
   const list = getLocalProjects();
-  const idx = list.findIndex((p) => p.reference_number === referenceNumber);
-  if (idx !== -1) {
-    const qIdx = list[idx].quotes?.findIndex((q) => q.id === quoteId);
-    if (qIdx !== undefined && qIdx !== -1 && list[idx].quotes) {
-      list[idx].quotes[qIdx].quote_status = decision;
+  const target = list.find((p) => p.reference_number === referenceNumber);
+  if (target) {
+    const qIdx = target.quotes?.findIndex((q) => q.id === quoteId);
+    if (qIdx !== undefined && qIdx !== -1 && target.quotes && target.quotes[qIdx]) {
+      target.quotes[qIdx].quote_status = decision;
     }
     if (decision === "approved") {
-      list[idx].status = "in_progress";
-      list[idx].history?.push({
+      target.status = "in_progress";
+      if (!target.history) target.history = [];
+      target.history.push({
         id: crypto.randomUUID(),
         previous_status: "quotation_sent",
         new_status: "in_progress",
@@ -849,8 +850,8 @@ export async function adminSendProjectMessage(
       sender_role: "admin",
       message: trimmed,
       is_internal: isInternal,
-      attachment_url: attachment?.url,
-      attachment_name: attachment?.name,
+      attachment_url: attachment?.url || null,
+      attachment_name: attachment?.name || null,
       created_at: new Date().toISOString(),
     });
     saveLocalProjects(list);
