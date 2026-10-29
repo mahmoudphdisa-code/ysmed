@@ -102,6 +102,7 @@ export function ProjectRequestWizard({
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const wizardContainerRef = useRef<HTMLDivElement>(null);
 
   // Step 5: Timeline & Budget
   const [targetDate, setTargetDate] = useState("");
@@ -255,11 +256,20 @@ export function ProjectRequestWizard({
     return true;
   };
 
+  const scrollToWizard = () => {
+    if (wizardContainerRef.current) {
+      const rect = wizardContainerRef.current.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const targetY = rect.top + scrollTop - 90;
+      window.scrollTo({ top: Math.max(0, targetY), behavior: "smooth" });
+    }
+  };
+
   const handleNext = () => {
     if (validateStep(currentStep)) {
       if (currentStep < totalSteps) {
         setCurrentStep((prev) => prev + 1);
-        window.scrollTo({ top: 300, behavior: "smooth" });
+        scrollToWizard();
       }
     }
   };
@@ -267,7 +277,7 @@ export function ProjectRequestWizard({
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
-      window.scrollTo({ top: 300, behavior: "smooth" });
+      scrollToWizard();
     }
   };
 
@@ -464,7 +474,10 @@ export function ProjectRequestWizard({
   }
 
   return (
-    <div className={`glass relative overflow-hidden rounded-2xl p-5 sm:p-8 md:p-10 ${className}`}>
+    <div
+      ref={wizardContainerRef}
+      className={`glass relative overflow-hidden rounded-2xl p-5 sm:p-8 md:p-10 ${className}`}
+    >
       {/* Wizard Header & Progress */}
       <div className="mb-8 border-b border-border/60 pb-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
