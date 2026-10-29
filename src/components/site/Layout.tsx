@@ -1,10 +1,44 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect, type ReactNode } from "react";
-import { Menu, X, Globe, ChevronRight, User, Sparkles } from "lucide-react";
+import { Menu, X, Globe, ChevronRight, ChevronDown, User, Sparkles, GraduationCap, Cpu } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+
+const serviceItems = [
+  {
+    to: "/engineering-services",
+    k: "engineeringServices",
+    icon: GraduationCap,
+    descEn: "Turnkey graduation projects & academic engineering support",
+    descAr: "دعم واستشارات هندسية متكاملة لمشاريع التخرج",
+    color: "text-primary bg-primary/15",
+  },
+  {
+    to: "/smart-homes",
+    k: "smartHomes",
+    icon: Sparkles,
+    descEn: "Smart living, premium automation & IoT systems",
+    descAr: "حلول المنازل الذكية الفاخرة والأتمتة المتقدمة",
+    color: "text-gold bg-gold/15",
+  },
+  {
+    to: "/solutions",
+    k: "solutions",
+    icon: Cpu,
+    descEn: "Renewable energy, industry, agriculture & power continuity",
+    descAr: "حلول الطاقة والقطاعات الصناعية والزراعية الذكية",
+    color: "text-emerald-400 bg-emerald-500/15",
+  },
+] as const;
 
 const nav = [
   { to: "/", k: "home" },
@@ -31,9 +65,17 @@ function LangSwitch() {
 }
 
 export function Navbar() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
+  const [servicesOpen, setServicesOpen] = useState(false);
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isServicesActive =
+    pathname.startsWith("/engineering-services") ||
+    pathname.startsWith("/smart-homes") ||
+    pathname.startsWith("/solutions");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,7 +89,11 @@ export function Navbar() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const close = () => setOpen(false);
+  const close = () => {
+    setOpen(false);
+    setServicesOpen(false);
+    setMobileServicesOpen(false);
+  };
 
   return (
     <header className="glass fixed inset-x-0 top-0 z-50 border-x-0 border-t-0">
@@ -66,26 +112,73 @@ export function Navbar() {
           >
             {t("home")}
           </Link>
-          <Link
-            to="/engineering-services"
-            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold text-foreground transition-all hover:text-primary data-[status=active]:text-primary data-[status=active]:bg-primary/10 border border-transparent data-[status=active]:border-primary/30"
+
+          {/* Services Dropdown */}
+          <div
+            className="relative"
+            onMouseEnter={() => setServicesOpen(true)}
+            onMouseLeave={() => setServicesOpen(false)}
           >
-            <Sparkles className="size-3.5 text-primary" />
-            <span>{t("engineeringServices")}</span>
-          </Link>
-          <Link
-            to="/smart-homes"
-            className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-bold text-foreground transition-all hover:text-primary data-[status=active]:text-primary data-[status=active]:bg-primary/10 border border-transparent data-[status=active]:border-primary/30"
-          >
-            <Sparkles className="size-3.5 text-gold animate-pulse" />
-            <span>{t("smartHomes")}</span>
-          </Link>
-          <Link
-            to="/solutions"
-            className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
-          >
-            {t("solutions")}
-          </Link>
+            <DropdownMenu open={servicesOpen} onOpenChange={setServicesOpen}>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all hover:text-primary outline-none cursor-pointer",
+                    isServicesActive
+                      ? "bg-primary/10 text-primary border border-primary/30 font-bold"
+                      : "text-muted-foreground hover:text-foreground border border-transparent"
+                  )}
+                  aria-expanded={servicesOpen}
+                >
+                  <Sparkles className="size-3.5 text-primary" />
+                  <span>{t("services")}</span>
+                  <ChevronDown
+                    className={cn(
+                      "size-3.5 text-muted-foreground transition-transform duration-200",
+                      servicesOpen && "rotate-180"
+                    )}
+                  />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                sideOffset={8}
+                className="w-80 glass border-border/80 bg-background/95 backdrop-blur-xl p-2 rounded-2xl shadow-2xl space-y-1 z-50 animate-in fade-in-0 zoom-in-95"
+              >
+                {serviceItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.to} asChild className="focus:bg-transparent p-0">
+                      <Link
+                        to={item.to}
+                        onClick={() => setServicesOpen(false)}
+                        className="group flex items-start gap-3 rounded-xl p-2.5 transition-colors hover:bg-surface/80 cursor-pointer outline-none w-full"
+                      >
+                        <div
+                          className={cn(
+                            "flex size-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+                            item.color
+                          )}
+                        >
+                          <Icon className="size-4" />
+                        </div>
+                        <div className="flex flex-col text-start">
+                          <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {t(item.k as any)}
+                          </span>
+                          <span className="text-xs text-muted-foreground line-clamp-1">
+                            {lang === "ar" ? item.descAr : item.descEn}
+                          </span>
+                        </div>
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <Link
             to="/my-projects"
             className="rounded-full px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-primary"
@@ -141,31 +234,94 @@ export function Navbar() {
       {/* Mobile drawer */}
       <div
         className={`overflow-hidden border-t transition-all duration-300 ease-in-out lg:hidden ${
-          open ? "max-h-[480px] opacity-100" : "max-h-0 opacity-0"
+          open ? "max-h-[640px] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
         }`}
       >
         <div className="px-4 pb-6 pt-3">
           {/* Nav links */}
           <nav className="flex flex-col">
-            {nav.map((n) => (
-              <Link
-                key={n.to}
-                to={n.to}
-                onClick={close}
-                className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors last:border-0 hover:text-primary data-[status=active]:text-primary"
+            <Link
+              to="/"
+              onClick={close}
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+            >
+              <span>{t("home")}</span>
+              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+            </Link>
+
+            {/* Mobile Services Accordion */}
+            <div className="border-b border-border/50 py-2">
+              <button
+                type="button"
+                onClick={() => setMobileServicesOpen((v) => !v)}
+                className="flex w-full items-center justify-between py-2 text-base font-medium text-foreground transition-colors hover:text-primary"
               >
-                <span>{t(n.k)}</span>
-                <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
-              </Link>
-            ))}
+                <span className="flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" />
+                  <span>{t("services")}</span>
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "size-4 text-muted-foreground transition-transform duration-200",
+                    mobileServicesOpen && "rotate-180"
+                  )}
+                />
+              </button>
+              {mobileServicesOpen && (
+                <div className="mt-1 flex flex-col gap-1.5 pl-3 rtl:pl-0 rtl:pr-3 border-l-2 rtl:border-l-0 rtl:border-r-2 border-primary/30">
+                  {serviceItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.to}
+                        to={item.to}
+                        onClick={close}
+                        className="flex items-center justify-between rounded-xl px-2.5 py-2 text-sm text-muted-foreground hover:bg-surface hover:text-primary transition-colors data-[status=active]:text-primary data-[status=active]:font-semibold"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Icon className="size-4 text-primary" />
+                          <span>{t(item.k as any)}</span>
+                        </span>
+                        <ChevronRight className="size-3.5 text-muted-foreground rtl:rotate-180" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <Link
+              to="/my-projects"
+              onClick={close}
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+            >
+              <span>{t("myProjects")}</span>
+              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+            </Link>
             <a
               href="/#company-profile"
               onClick={close}
-              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors last:border-0 hover:text-primary"
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary"
             >
               <span>{t("companyProfile")}</span>
               <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
             </a>
+            <Link
+              to="/about"
+              onClick={close}
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+            >
+              <span>{t("about")}</span>
+              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+            </Link>
+            <Link
+              to="/contact"
+              onClick={close}
+              className="flex items-center justify-between border-b border-border/50 py-3.5 text-base text-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+            >
+              <span>{t("contact")}</span>
+              <ChevronRight className="size-4 text-muted-foreground rtl:rotate-180" />
+            </Link>
           </nav>
 
           {/* Bottom actions */}

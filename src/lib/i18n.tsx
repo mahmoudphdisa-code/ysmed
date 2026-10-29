@@ -5,6 +5,8 @@ export type L = { en: string; ar: string };
 
 const dict = {
   home: { en: "Home", ar: "الرئيسية" },
+  services: { en: "Services", ar: "خدماتنا" },
+  survices: { en: "Services", ar: "خدماتنا" },
   engineeringServices: { en: "Graduation Project Services", ar: "خدمات مشاريع التخرج" },
   myProjects: { en: "My Requests", ar: "طلباتي" },
   smartHomes: { en: "Smart Homes", ar: "المنازل الذكية" },
