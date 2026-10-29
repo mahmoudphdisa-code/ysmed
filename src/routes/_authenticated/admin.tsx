@@ -45,6 +45,10 @@ import {
   Tag,
   Package,
   ToggleLeft,
+  GraduationCap,
+  Cpu,
+  Receipt,
+  FileCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -53,6 +57,12 @@ import { useI18n } from "@/lib/i18n";
 import { solutions } from "@/data/solutions";
 import { initialProjects, type PortfolioProject } from "@/data/portfolio";
 import { smartProducts as initialSmartProducts, type SmartProduct, type Protocol, smartCategories } from "@/data/smartHomesData";
+import {
+  fetchAllAdminRequests,
+  adminUpdateRequestStatus,
+  type StoredProjectRequest,
+} from "@/services/engineeringService";
+import { requestStatuses } from "@/data/engineeringData";
 import {
   Dialog,
   DialogContent,
@@ -185,6 +195,11 @@ function Page() {
   // Navigation & Tabs: overview | inquiries | customers | portfolio | smart-store
   const [tab, setTab] = useState<"overview" | "inquiries" | "customers" | "portfolio" | "smart-store">("overview");
   
+  // Service filter for Inquiries & Requests tab: all | graduation | smart-homes | solutions
+  const [requestServiceFilter, setRequestServiceFilter] = useState<"all" | "graduation" | "smart-homes" | "solutions">("all");
+  const [engineeringRequests, setEngineeringRequests] = useState<StoredProjectRequest[]>([]);
+  const [selectedProjectRequest, setSelectedProjectRequest] = useState<StoredProjectRequest | null>(null);
+
   // Inquiries Filters
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
@@ -320,13 +335,16 @@ function Page() {
 
       setIsAdmin(true);
 
-      const [inqRes, profRes, rolesRes, projRes, smartRes] = await Promise.all([
+      const [inqRes, profRes, rolesRes, projRes, smartRes, engRequests] = await Promise.all([
         supabase.from("inquiries").select("*").order("created_at", { ascending: false }),
         supabase.from("profiles").select("id, full_name, email, phone, company, created_at").order("created_at", { ascending: false }),
         supabase.from("user_roles").select("user_id, role"),
         supabase.from("portfolio_projects").select("*").order("order_index", { ascending: true }),
         supabase.from("smart_products").select("*").order("order_index", { ascending: true }),
+        fetchAllAdminRequests(),
       ]);
+
+      setEngineeringRequests(engRequests || []);
 
       if (inqRes.error) console.error("Inquiries fetch error:", inqRes.error);
       if (rolesRes.error) console.warn("User roles fetch error:", rolesRes.error);
@@ -531,11 +549,24 @@ function Page() {
       )
       .subscribe();
 
+    const engChannel = supabase
+      .channel("admin-project-requests-live")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "project_requests" },
+        async () => {
+          const updated = await fetchAllAdminRequests();
+          setEngineeringRequests(updated || []);
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(inqChannel);
       supabase.removeChannel(profChannel);
       supabase.removeChannel(projChannel);
       supabase.removeChannel(smartChannel);
+      supabase.removeChannel(engChannel);
     };
   }, [fetchData, lang]);
 
@@ -593,6 +624,74 @@ function Page() {
         return sortBy === "newest" ? timeB - timeA : timeA - timeB;
       });
   }, [rows, statusFilter, kindFilter, sectorFilter, dateFilter, search, sortBy]);
+
+  // ─── THREE CORE SERVICES SEGREGATION ────────────────────────────────────
+  const smartHomeInquiries = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.kind === "smart_home_installation" ||
+          r.kind === "smart_home_order" ||
+          r.sector === "smart-buildings"
+      ),
+    [rows]
+  );
+
+  const solutionsInquiries = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          r.kind !== "smart_home_installation" &&
+          r.kind !== "smart_home_order" &&
+          r.sector !== "smart-buildings"
+      ),
+    [rows]
+  );
+
+  const filteredEngineeringRequests = useMemo(() => {
+    return engineeringRequests
+      .filter((p) => {
+        if (statusFilter !== "all" && p.status !== statusFilter) return false;
+        if (search.trim()) {
+          const q = search.toLowerCase();
+          const match =
+            p.reference_number.toLowerCase().includes(q) ||
+            p.project_title.toLowerCase().includes(q) ||
+            p.full_name.toLowerCase().includes(q) ||
+            p.email.toLowerCase().includes(q) ||
+            (p.phone && p.phone.toLowerCase().includes(q)) ||
+            (p.university && p.university.toLowerCase().includes(q)) ||
+            (p.project_description && p.project_description.toLowerCase().includes(q));
+          if (!match) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return sortBy === "newest" ? timeB - timeA : timeA - timeB;
+      });
+  }, [engineeringRequests, statusFilter, search, sortBy]);
+
+  const filteredSmartHomeInquiries = useMemo(() => {
+    return filteredRows.filter(
+      (r) =>
+        r.kind === "smart_home_installation" ||
+        r.kind === "smart_home_order" ||
+        r.sector === "smart-buildings"
+    );
+  }, [filteredRows]);
+
+  const filteredSolutionsInquiries = useMemo(() => {
+    return filteredRows.filter(
+      (r) =>
+        r.kind !== "smart_home_installation" &&
+        r.kind !== "smart_home_order" &&
+        r.sector !== "smart-buildings"
+    );
+  }, [filteredRows]);
+
+  const totalAllRequestsCount = engineeringRequests.length + rows.length;
 
   // Filtered customers
   const filteredCustomers = useMemo(() => {
@@ -706,7 +805,45 @@ function Page() {
     if (selectedInquiry?.id === id) {
       setSelectedInquiry((prev) => (prev ? { ...prev, status } : null));
     }
-    toast.success(lang === "ar" ? "تم تحديث حالة الطلب" : "Status updated");
+    toast.success(lang === "ar" ? "تم حفظ الحالة في Supabase بنجاح" : "Status updated in Supabase successfully");
+  };
+
+  const setEngineeringStatus = async (projectId: string, newStatus: string) => {
+    try {
+      const ok = await adminUpdateRequestStatus(projectId, newStatus);
+      if (ok) {
+        setEngineeringRequests((prev) =>
+          prev.map((item) => (item.id === projectId ? { ...item, status: newStatus } : item))
+        );
+        if (selectedProjectRequest?.id === projectId) {
+          setSelectedProjectRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
+        }
+        toast.success(
+          lang === "ar"
+            ? "تم حفظ حالة مشروع التخرج في Supabase بنجاح"
+            : "Graduation project status saved in Supabase"
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error(lang === "ar" ? "فشل تحديث الحالة في Supabase" : "Failed to update status in Supabase");
+    }
+  };
+
+  const removeProjectRequest = async (id: string) => {
+    if (!confirm(lang === "ar" ? "هل أنت متأكد من حذف طلب مشروع التخرج هذا نهائياً من قاعدة البيانات؟" : "Are you sure you want to permanently delete this project request?")) return;
+    try {
+      const { error } = await supabase.from("project_requests" as any).delete().eq("id", id);
+      if (error) throw error;
+      setEngineeringRequests((prev) => prev.filter((p) => p.id !== id));
+      if (selectedProjectRequest?.id === id) {
+        setSelectedProjectRequest(null);
+      }
+      toast.success(lang === "ar" ? "تم حذف الطلب بنجاح من قاعدة البيانات" : "Project request deleted from Supabase");
+    } catch (err) {
+      console.error(err);
+      toast.error(lang === "ar" ? "تعذر حذف الطلب" : "Failed to delete request");
+    }
   };
 
   const removeInquiry = async (id: string) => {
@@ -1374,33 +1511,80 @@ function Page() {
     toast.success(lang === "ar" ? "تم تصدير قائمة العملاء إلى ملف Excel بنجاح" : "Customers exported to Excel successfully");
   };
 
-  // Export Inquiries to Excel / CSV
+  // Export Inquiries to Excel / CSV (Service Aware)
   const exportInquiriesToExcel = () => {
+    if (requestServiceFilter === "graduation") {
+      const headers = [
+        lang === "ar" ? "رقم المرجع" : "Reference Number",
+        lang === "ar" ? "عنوان المشروع" : "Project Title",
+        lang === "ar" ? "التصنيف" : "Category",
+        lang === "ar" ? "الحالة" : "Status",
+        lang === "ar" ? "اسم الطالب / العميل" : "Client Name",
+        lang === "ar" ? "نوع المستخدم" : "User Type",
+        lang === "ar" ? "الجامعة" : "University",
+        lang === "ar" ? "القسم" : "Department",
+        lang === "ar" ? "البريد الإلكتروني" : "Email",
+        lang === "ar" ? "الهاتف" : "Phone",
+        lang === "ar" ? "الأولوية" : "Urgency",
+        lang === "ar" ? "المرحلة" : "Stage",
+        lang === "ar" ? "الميزانية المتوقعة" : "Budget Range",
+        lang === "ar" ? "تاريخ الطلب" : "Created At",
+      ];
+
+      const data = filteredEngineeringRequests.map((p) => [
+        p.reference_number,
+        p.project_title,
+        p.project_category,
+        p.status,
+        p.full_name,
+        p.user_type,
+        p.university || "",
+        p.department || "",
+        p.email,
+        p.phone,
+        p.urgency,
+        p.current_stage,
+        `${p.budget_min || 0} - ${p.budget_max || 0} ${p.budget_currency || "EGP"}`,
+        new Date(p.created_at).toLocaleString(lang === "ar" ? "ar-EG" : "en-US"),
+      ]);
+
+      exportToCsv(`ysmed_graduation_requests_${new Date().toISOString().slice(0, 10)}.csv`, headers, data);
+      toast.success(lang === "ar" ? "تم تصدير طلبات مشاريع التخرج بنجاح" : "Graduation requests exported");
+      return;
+    }
+
     const headers = [
       lang === "ar" ? "المعرف" : "Inquiry ID",
-      lang === "ar" ? "النوع" : "Type",
+      lang === "ar" ? "الخدمة / النوع" : "Service / Type",
       lang === "ar" ? "القطاع" : "Sector",
       lang === "ar" ? "الحالة" : "Status",
       lang === "ar" ? "الاسم" : "Name",
-      lang === "ar" ? "الشركة" : "Company",
+      lang === "ar" ? "الشركة / العنوان" : "Company / Address",
       lang === "ar" ? "البريد الإلكتروني" : "Email",
       lang === "ar" ? "الهاتف" : "Phone",
-      lang === "ar" ? "الرسالة" : "Message",
+      lang === "ar" ? "الرسالة والتفاصيل" : "Message",
       lang === "ar" ? "رابط الصورة" : "Photo URL",
       lang === "ar" ? "رابط الملف" : "File URL",
       lang === "ar" ? "اسم الملف" : "File Name",
       lang === "ar" ? "تاريخ الإرسال" : "Submission Date",
     ];
 
-    const data = filteredRows.map((r) => [
+    const sourceRows =
+      requestServiceFilter === "smart-homes"
+        ? filteredSmartHomeInquiries
+        : requestServiceFilter === "solutions"
+        ? filteredSolutionsInquiries
+        : filteredRows;
+
+    const data = sourceRows.map((r) => [
       r.id,
-      r.kind === "request"
-        ? lang === "ar"
-          ? "طلب مشروع"
-          : "Project Request"
-        : lang === "ar"
-        ? "رسالة تواصل"
-        : "Contact Message",
+      r.kind === "smart_home_installation"
+        ? lang === "ar" ? "مقايسة منزل ذكي" : "Smart Home Quote"
+        : r.kind === "smart_home_order"
+        ? lang === "ar" ? "طلب متجر ذكي" : "Smart Store Order"
+        : r.kind === "request"
+        ? lang === "ar" ? "طلب حل هندسي" : "Solution Request"
+        : lang === "ar" ? "تواصل عام" : "General Contact",
       sectorName(r.sector) || r.sector || "",
       t(`st_${r.status}` as "st_new") || r.status,
       r.name,
@@ -1505,10 +1689,11 @@ function Page() {
       <Section className="pt-6 max-w-7xl">
         {/* ─── 5 Top Metric Cards ─────────────────────────────────────────────────── */}
         <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-5">
-          {/* 1. All Inquiries */}
+          {/* 1. All Inquiries across 3 Services */}
           <div
             onClick={() => {
               setTab("inquiries");
+              setRequestServiceFilter("all");
               setStatusFilter("all");
             }}
             className="glass rounded-2xl p-4 sm:p-5 border-l-4 border-l-primary cursor-pointer transition-all hover:scale-[1.02] hover:shadow-glow"
@@ -1517,9 +1702,9 @@ function Page() {
               <p className="text-xs font-medium text-muted-foreground">{t("allInquiries")}</p>
               <MessageSquare className="size-4 text-primary" />
             </div>
-            <p className="mt-2 text-2xl font-bold text-foreground">{rows.length}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {projectRequestsCount} {t("request")} • {contactMessagesCount} {t("contact")}
+            <p className="mt-2 text-2xl font-bold text-foreground">{totalAllRequestsCount}</p>
+            <p className="mt-1 text-[11px] text-muted-foreground truncate">
+              {engineeringRequests.length} {t("engineeringServices")} • {smartHomeInquiries.length} {t("smartHomes")} • {solutionsInquiries.length} {t("solutions")}
             </p>
           </div>
 
@@ -1619,7 +1804,7 @@ function Page() {
               className="rounded-xl flex items-center gap-1.5"
             >
               <MessageSquare className="size-4" />
-              {t("inquiriesTab")} ({rows.length})
+              {t("inquiriesTab")} ({totalAllRequestsCount})
             </Button>
 
             {/* TAB 4: COMPANY PROFILE / PORTFOLIO */}
@@ -1722,61 +1907,118 @@ function Page() {
         {tab === "overview" && (
           <div className="mt-6 space-y-6">
             <div className="grid gap-6 md:grid-cols-3">
-              {/* Card 1: Request vs Contact Distribution */}
+              {/* Card 1: 3 Core Services Distribution */}
               <div className="glass rounded-3xl p-6 border border-border/80">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-foreground text-base flex items-center gap-2">
                     <TrendingUp className="size-4 text-primary" />
-                    {t("requestsVsContact")}
+                    <span>{lang === "ar" ? "توزيع الطلبات حسب الخدمات" : "Services Distribution"}</span>
                   </h3>
-                  <span className="text-xs text-muted-foreground font-mono">{rows.length} total</span>
+                  <span className="text-xs text-muted-foreground font-mono">{totalAllRequestsCount} total</span>
                 </div>
 
-                <div className="mt-5 space-y-3">
-                  <div>
+                <div className="mt-5 space-y-3.5">
+                  {/* Graduation Projects */}
+                  <div
+                    onClick={() => {
+                      setTab("inquiries");
+                      setRequestServiceFilter("graduation");
+                      setStatusFilter("all");
+                    }}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-primary flex items-center gap-1">
-                        <Sparkles className="size-3" />
-                        {t("request")}
+                      <span className="text-primary flex items-center gap-1.5 group-hover:underline">
+                        <GraduationCap className="size-3.5" />
+                        {t("engineeringServices")}
                       </span>
-                      <span>
-                        {projectRequestsCount} (
-                        {rows.length > 0 ? Math.round((projectRequestsCount / rows.length) * 100) : 0}%)
+                      <span className="font-mono">
+                        {engineeringRequests.length} (
+                        {totalAllRequestsCount > 0
+                          ? Math.round((engineeringRequests.length / totalAllRequestsCount) * 100)
+                          : 0}
+                        %)
                       </span>
                     </div>
                     <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface">
                       <div
                         className="h-full bg-primary transition-all duration-500 rounded-full"
                         style={{
-                          width: `${rows.length > 0 ? (projectRequestsCount / rows.length) * 100 : 0}%`,
+                          width: `${totalAllRequestsCount > 0 ? (engineeringRequests.length / totalAllRequestsCount) * 100 : 0}%`,
                         }}
                       />
                     </div>
                   </div>
 
-                  <div>
+                  {/* Smart Homes */}
+                  <div
+                    onClick={() => {
+                      setTab("inquiries");
+                      setRequestServiceFilter("smart-homes");
+                      setStatusFilter("all");
+                    }}
+                    className="cursor-pointer group"
+                  >
                     <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-muted-foreground">{t("contact")}</span>
-                      <span>
-                        {contactMessagesCount} (
-                        {rows.length > 0 ? Math.round((contactMessagesCount / rows.length) * 100) : 0}%)
+                      <span className="text-gold flex items-center gap-1.5 group-hover:underline">
+                        <Sparkles className="size-3.5" />
+                        {t("smartHomes")}
+                      </span>
+                      <span className="font-mono">
+                        {smartHomeInquiries.length} (
+                        {totalAllRequestsCount > 0
+                          ? Math.round((smartHomeInquiries.length / totalAllRequestsCount) * 100)
+                          : 0}
+                        %)
                       </span>
                     </div>
                     <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface">
                       <div
-                        className="h-full bg-muted-foreground/60 transition-all duration-500 rounded-full"
+                        className="h-full bg-gold transition-all duration-500 rounded-full"
                         style={{
-                          width: `${rows.length > 0 ? (contactMessagesCount / rows.length) * 100 : 0}%`,
+                          width: `${totalAllRequestsCount > 0 ? (smartHomeInquiries.length / totalAllRequestsCount) * 100 : 0}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Innovative Solutions */}
+                  <div
+                    onClick={() => {
+                      setTab("inquiries");
+                      setRequestServiceFilter("solutions");
+                      setStatusFilter("all");
+                    }}
+                    className="cursor-pointer group"
+                  >
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span className="text-cyan-400 flex items-center gap-1.5 group-hover:underline">
+                        <Cpu className="size-3.5" />
+                        {t("solutions")}
+                      </span>
+                      <span className="font-mono">
+                        {solutionsInquiries.length} (
+                        {totalAllRequestsCount > 0
+                          ? Math.round((solutionsInquiries.length / totalAllRequestsCount) * 100)
+                          : 0}
+                        %)
+                      </span>
+                    </div>
+                    <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-surface">
+                      <div
+                        className="h-full bg-cyan-400 transition-all duration-500 rounded-full"
+                        style={{
+                          width: `${totalAllRequestsCount > 0 ? (solutionsInquiries.length / totalAllRequestsCount) * 100 : 0}%`,
                         }}
                       />
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-6 border-t border-border/40 pt-4 text-xs text-muted-foreground leading-relaxed">
+                <div className="mt-5 border-t border-border/40 pt-3 text-xs text-muted-foreground leading-relaxed">
                   {lang === "ar"
-                    ? "طلبات المشاريع تمثل عملاء جادين يبحثون عن حلول هندسية وتوريدات متخصصة."
-                    : "Project requests represent high-value leads looking for customized engineering."}
+                    ? "انقر على أي خدمة للانتقال المباشر لطلباتها وإدارتها في قاعدة البيانات."
+                    : "Click any service to filter and manage its individual requests."}
                 </div>
               </div>
 
@@ -2024,10 +2266,126 @@ function Page() {
         )}
 
         {/* ═══════════════════════════════════════════════════════════════════
-            TAB 2: INQUIRIES & REQUESTS MANAGEMENT
+            TAB 2: INQUIRIES & REQUESTS MANAGEMENT (BY SERVICES INDIVIDUALLY)
         ═══════════════════════════════════════════════════════════════════ */}
         {tab === "inquiries" && (
-          <div className="mt-6 space-y-5">
+          <div className="mt-6 space-y-6">
+            {/* ─── 3 Services Category Selector Tabs ──────────────────────────────── */}
+            <div className="glass rounded-3xl p-3 border border-border/80 flex flex-wrap items-center gap-2">
+              {/* Service: All Services */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestServiceFilter("all");
+                  setStatusFilter("all");
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer",
+                  requestServiceFilter === "all"
+                    ? "bg-foreground text-background shadow-glow"
+                    : "border border-border/60 bg-surface/60 text-muted-foreground hover:bg-surface hover:text-foreground"
+                )}
+              >
+                <Layers className="size-4" />
+                <span>{lang === "ar" ? "جميع الخدمات والطلبات" : "All Services & Requests"}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    requestServiceFilter === "all"
+                      ? "bg-background/20 text-background"
+                      : "bg-primary/20 text-primary"
+                  )}
+                >
+                  {totalAllRequestsCount}
+                </span>
+              </button>
+
+              {/* Service 1: Graduation Project Services */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestServiceFilter("graduation");
+                  setStatusFilter("all");
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer",
+                  requestServiceFilter === "graduation"
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "border border-border/60 bg-surface/60 text-muted-foreground hover:bg-surface hover:text-foreground"
+                )}
+              >
+                <GraduationCap className="size-4" />
+                <span>{t("engineeringServices")}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    requestServiceFilter === "graduation"
+                      ? "bg-white/20 text-white"
+                      : "bg-primary/20 text-primary"
+                  )}
+                >
+                  {engineeringRequests.length}
+                </span>
+              </button>
+
+              {/* Service 2: Smart Homes */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestServiceFilter("smart-homes");
+                  setStatusFilter("all");
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer",
+                  requestServiceFilter === "smart-homes"
+                    ? "bg-gold text-slate-950 font-extrabold shadow-glow"
+                    : "border border-border/60 bg-surface/60 text-muted-foreground hover:bg-surface hover:text-foreground"
+                )}
+              >
+                <Sparkles className="size-4" />
+                <span>{t("smartHomes")}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    requestServiceFilter === "smart-homes"
+                      ? "bg-black/25 text-slate-950"
+                      : "bg-gold/20 text-gold"
+                  )}
+                >
+                  {smartHomeInquiries.length}
+                </span>
+              </button>
+
+              {/* Service 3: Innovative Solutions */}
+              <button
+                type="button"
+                onClick={() => {
+                  setRequestServiceFilter("solutions");
+                  setStatusFilter("all");
+                }}
+                className={cn(
+                  "flex items-center gap-2 rounded-2xl px-4 py-2.5 text-xs font-bold transition-all cursor-pointer",
+                  requestServiceFilter === "solutions"
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "border border-border/60 bg-surface/60 text-muted-foreground hover:bg-surface hover:text-foreground"
+                )}
+              >
+                <Cpu className="size-4" />
+                <span>{t("solutions")}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[11px] font-bold",
+                    requestServiceFilter === "solutions"
+                      ? "bg-white/20 text-white"
+                      : "bg-primary/20 text-primary"
+                  )}
+                >
+                  {solutionsInquiries.length}
+                </span>
+              </button>
+            </div>
+
+            {/* ─── Search & Filters Panel ─────────────────────────────────────────── */}
             <div className="glass rounded-3xl p-5 border border-border/80 space-y-4">
               <div className="grid gap-3 sm:grid-cols-12">
                 <div className="relative sm:col-span-5">
@@ -2035,7 +2393,21 @@ function Page() {
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={t("searchPlaceholder")}
+                    placeholder={
+                      requestServiceFilter === "graduation"
+                        ? lang === "ar"
+                          ? "ابحث برقم المرجع، عنوان المشروع، اسم الطالب، الجامعة..."
+                          : "Search by ref, project title, student name, university..."
+                        : requestServiceFilter === "smart-homes"
+                        ? lang === "ar"
+                          ? "ابحث باسم العميل، الهاتف، المنطقة، تفاصيل الأجهزة..."
+                          : "Search by client name, phone, area, smart devices..."
+                        : requestServiceFilter === "solutions"
+                        ? lang === "ar"
+                          ? "ابحث بالقطاع، اسم الشركة، اسم العميل، الرسالة..."
+                          : "Search by sector, company, client name, message..."
+                        : t("searchPlaceholder")
+                    }
                     className="w-full rounded-2xl border border-input bg-surface/80 ps-10 pe-9 py-2.5 text-sm text-foreground outline-none focus:border-primary focus:shadow-glow transition-all"
                   />
                   {search && (
@@ -2048,22 +2420,24 @@ function Page() {
                   )}
                 </div>
 
-                <div className="sm:col-span-3">
-                  <select
-                    value={sectorFilter}
-                    onChange={(e) => setSectorFilter(e.target.value)}
-                    className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs font-medium text-foreground outline-none focus:border-primary cursor-pointer"
-                  >
-                    <option value="all">{t("allSectors")}</option>
-                    {solutions.map((s) => (
-                      <option key={s.slug} value={s.slug}>
-                        {tl(s.title)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {(requestServiceFilter === "solutions" || requestServiceFilter === "all") && (
+                  <div className="sm:col-span-3">
+                    <select
+                      value={sectorFilter}
+                      onChange={(e) => setSectorFilter(e.target.value)}
+                      className="w-full rounded-2xl border border-input bg-surface/80 px-3.5 py-2.5 text-xs font-medium text-foreground outline-none focus:border-primary cursor-pointer"
+                    >
+                      <option value="all">{t("allSectors")}</option>
+                      {solutions.map((s) => (
+                        <option key={s.slug} value={s.slug}>
+                          {tl(s.title)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                <div className="sm:col-span-2">
+                <div className={requestServiceFilter === "solutions" || requestServiceFilter === "all" ? "sm:col-span-2" : "sm:col-span-4"}>
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value as "all" | "today" | "7days" | "30days")}
@@ -2076,7 +2450,7 @@ function Page() {
                   </select>
                 </div>
 
-                <div className="sm:col-span-2">
+                <div className={requestServiceFilter === "solutions" || requestServiceFilter === "all" ? "sm:col-span-2" : "sm:col-span-3"}>
                   <button
                     onClick={() => setSortBy((prev) => (prev === "newest" ? "oldest" : "newest"))}
                     className="w-full rounded-2xl border border-input bg-surface/80 px-3 py-2.5 text-xs font-medium text-foreground outline-none hover:border-primary flex items-center justify-center gap-1.5"
@@ -2087,250 +2461,682 @@ function Page() {
                 </div>
               </div>
 
+              {/* Status Filters bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/40">
                 <div className="flex flex-wrap items-center gap-1.5 text-xs">
                   <span className="text-muted-foreground me-1 font-semibold">{t("status")}:</span>
-                  {["all", ...statuses].map((st) => (
-                    <button
-                      key={st}
-                      onClick={() => setStatusFilter(st)}
-                      className={`rounded-full border px-3 py-1 font-medium transition-all ${
-                        statusFilter === st
-                          ? "border-primary bg-primary/15 text-primary shadow-glow font-bold"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-surface"
-                      }`}
-                    >
-                      {st === "all" ? t("all") : t(`st_${st}` as "st_new")}{" "}
-                      <span className="text-[10px] opacity-75">
-                        ({st === "all" ? rows.length : counts[st] || 0})
-                      </span>
-                    </button>
-                  ))}
+                  {requestServiceFilter === "graduation"
+                    ? [
+                        { val: "all", label: t("all") },
+                        ...requestStatuses.map((st) => ({
+                          val: st.value,
+                          label: isAr ? st.labelAr : st.labelEn,
+                        })),
+                      ].map((st) => (
+                        <button
+                          key={st.val}
+                          onClick={() => setStatusFilter(st.val)}
+                          className={`rounded-full border px-3 py-1 font-medium transition-all ${
+                            statusFilter === st.val
+                              ? "border-primary bg-primary/15 text-primary shadow-glow font-bold"
+                              : "border-border text-muted-foreground hover:text-foreground hover:bg-surface"
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      ))
+                    : ["all", ...statuses].map((st) => (
+                        <button
+                          key={st}
+                          onClick={() => setStatusFilter(st)}
+                          className={`rounded-full border px-3 py-1 font-medium transition-all ${
+                            statusFilter === st
+                              ? "border-primary bg-primary/15 text-primary shadow-glow font-bold"
+                              : "border-border text-muted-foreground hover:text-foreground hover:bg-surface"
+                          }`}
+                        >
+                          {st === "all" ? t("all") : t(`st_${st}` as "st_new")}{" "}
+                          <span className="text-[10px] opacity-75">
+                            ({st === "all" ? rows.length : counts[st] || 0})
+                          </span>
+                        </button>
+                      ))}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <span className="text-muted-foreground me-1 font-semibold">{t("inquiryType")}:</span>
-                  {[
-                    { id: "all", label: t("all") },
-                    { id: "request", label: t("request") },
-                    { id: "contact", label: t("contact") },
-                  ].map((k) => (
-                    <button
-                      key={k.id}
-                      onClick={() => setKindFilter(k.id)}
-                      className={`rounded-full border px-3 py-1 font-medium transition-all ${
-                        kindFilter === k.id
-                          ? "border-gold bg-gold/15 text-gold shadow-gold font-bold"
-                          : "border-border text-muted-foreground hover:text-foreground hover:bg-surface"
-                      }`}
-                    >
-                      {k.label}
-                    </button>
-                  ))}
-                </div>
+                {requestServiceFilter === "smart-homes" && (
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="text-muted-foreground me-1 font-semibold">
+                      {lang === "ar" ? "نوع طلب المنزل الذكي:" : "Smart Home Type:"}
+                    </span>
+                    {[
+                      { id: "all", label: t("all") },
+                      { id: "smart_home_installation", label: lang === "ar" ? "مقايسة توريد وتركيب" : "Installation Quote" },
+                      { id: "smart_home_order", label: lang === "ar" ? "طلب شراء أجهزة" : "Product Order" },
+                    ].map((k) => (
+                      <button
+                        key={k.id}
+                        onClick={() => setKindFilter(k.id)}
+                        className={`rounded-full border px-3 py-1 font-medium transition-all ${
+                          kindFilter === k.id
+                            ? "border-gold bg-gold/15 text-gold shadow-gold font-bold"
+                            : "border-border text-muted-foreground hover:text-foreground hover:bg-surface"
+                        }`}
+                      >
+                        {k.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="grid gap-4">
-              {filteredRows.length === 0 && (
-                <div className="glass rounded-3xl p-12 text-center text-muted-foreground border border-border/60">
-                  <MessageSquare className="size-12 mx-auto mb-3 opacity-30 text-primary" />
-                  <p className="text-base font-semibold">{t("noInquiries")}</p>
-                </div>
-              )}
-
-              {filteredRows.map((r) => {
-                const sector = getSector(r.sector);
-                const SectorIcon = sector?.icon || Building;
-                const whatsappUrl = getWhatsAppUrl(r.phone, r.name);
-                const mailtoUrl = getMailtoUrl(r);
-
-                return (
-                  <div
-                    key={r.id}
-                    className="glass rounded-3xl p-5 sm:p-6 border border-border/80 transition-all hover:border-primary/50 hover:shadow-glow space-y-4"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <span
-                          className={`rounded-full px-3 py-1 font-bold ${
-                            r.kind === "request"
-                              ? "bg-primary/20 text-primary border border-primary/30"
-                              : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
-                          }`}
-                        >
-                          {r.kind === "request" ? t("request") : t("contact")}
-                        </span>
-
-                        {sector && (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/15 px-3 py-1 text-gold font-medium border border-gold/30">
-                            <SectorIcon className="size-3.5" />
-                            {tl(sector.title)}
-                          </span>
-                        )}
-
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          <Clock className="size-3" />
-                          {formatDate(r.created_at)} ({timeAgo(r.created_at)})
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <select
-                          value={r.status}
-                          onChange={(e) => setStatus(r.id, e.target.value)}
-                          className={`rounded-xl border px-3 py-1 text-xs font-semibold outline-none transition-colors cursor-pointer ${
-                            r.status === "done"
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                              : r.status === "in_progress"
-                              ? "border-gold/40 bg-gold/10 text-gold"
-                              : "border-blue-500/40 bg-blue-500/10 text-blue-400"
-                          }`}
-                        >
-                          {statuses.map((s) => (
-                            <option key={s} value={s} className="bg-surface text-foreground">
-                              {t(`st_${s}` as "st_new")}
-                            </option>
-                          ))}
-                        </select>
-
-                        <button
-                          onClick={() => removeInquiry(r.id)}
-                          aria-label="Delete"
-                          title={lang === "ar" ? "حذف الرسالة" : "Delete message"}
-                          className="flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
+            {/* ─── Service Specific Content Lists ─────────────────────────────────── */}
+            <div className="space-y-4">
+              {/* 1. GRADUATION PROJECT SERVICES LIST */}
+              {(requestServiceFilter === "graduation" || requestServiceFilter === "all") && (
+                <div className="space-y-4">
+                  {requestServiceFilter === "all" && (
+                    <div className="flex items-center gap-2 pt-2 border-b border-border/40 pb-2">
+                      <GraduationCap className="size-4 text-primary" />
+                      <h3 className="font-bold text-sm text-foreground">
+                        {t("engineeringServices")} ({filteredEngineeringRequests.length})
+                      </h3>
                     </div>
+                  )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-y border-border/40 py-2.5">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="font-bold text-base text-foreground">{r.name}</span>
-                        {r.company && (
-                          <span className="inline-flex items-center gap-1 rounded-lg bg-surface/80 px-2 py-0.5 text-xs text-muted-foreground border border-border/50">
-                            <Building className="size-3 text-gold" />
-                            {r.company}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-3 text-xs">
-                        <a
-                          href={`mailto:${r.email}`}
-                          className="text-primary hover:underline flex items-center gap-1"
-                        >
-                          <Mail className="size-3" />
-                          {r.email}
-                        </a>
-
-                        {r.phone && (
-                          <a
-                            href={`tel:${r.phone}`}
-                            className="text-muted-foreground hover:text-foreground flex items-center gap-1"
-                          >
-                            <Phone className="size-3" />
-                            {r.phone}
-                          </a>
-                        )}
-                      </div>
+                  {requestServiceFilter === "graduation" && filteredEngineeringRequests.length === 0 && (
+                    <div className="glass rounded-3xl p-12 text-center text-muted-foreground border border-border/60">
+                      <GraduationCap className="size-12 mx-auto mb-3 opacity-30 text-primary" />
+                      <p className="text-base font-semibold">
+                        {lang === "ar"
+                          ? "لا توجد طلبات لمشاريع التخرج مطابقة للفلاتر الحالية"
+                          : "No graduation project requests match current filters"}
+                      </p>
                     </div>
+                  )}
 
-                    <div className="rounded-2xl bg-surface/50 p-4 border border-border/40 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-                      {r.message}
-                    </div>
+                  {filteredEngineeringRequests.map((p) => {
+                    const statusObj = requestStatuses.find((s) => s.value === p.status);
+                    const whatsappUrl = p.whatsapp || p.phone ? `https://wa.me/${(p.whatsapp || p.phone).replace(/\D/g, "")}` : null;
 
-                    {(r.photo_url || r.file_url) && (
-                      <div className="flex flex-wrap items-center gap-3 pt-1">
-                        {r.photo_url && (
-                          <div
-                            onClick={() => setPreviewPhoto(r.photo_url || null)}
-                            className="group inline-flex items-center gap-3 rounded-2xl border border-border bg-surface/70 p-2 text-xs transition-all hover:border-primary cursor-pointer hover:bg-surface"
-                          >
-                            <img
-                              src={r.photo_url}
-                              alt="Attached photo thumbnail"
-                              className="size-12 rounded-xl object-cover border border-border"
-                            />
-                            <div className="pe-2">
-                              <p className="font-semibold text-foreground group-hover:text-primary flex items-center gap-1">
-                                <Eye className="size-3.5" />
-                                {t("viewPhoto")}
-                              </p>
-                            </div>
+                    return (
+                      <div
+                        key={p.id}
+                        className="glass rounded-3xl p-5 sm:p-6 border border-primary/30 transition-all hover:border-primary hover:shadow-glow space-y-4"
+                      >
+                        {/* Header Row */}
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="font-mono font-bold text-primary rounded-lg bg-primary/10 px-2.5 py-1 border border-primary/20 flex items-center gap-1.5">
+                              <GraduationCap className="size-3.5" />
+                              <span>{p.reference_number}</span>
+                            </span>
+
+                            <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+                              {p.project_category}
+                            </span>
+
+                            <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted-foreground border border-border/50">
+                              {p.urgency === "urgent"
+                                ? isAr ? "عاجل جداً" : "Critical"
+                                : p.urgency === "high"
+                                ? isAr ? "أولوية هامة" : "High"
+                                : isAr ? "أولوية عادية" : "Standard"}
+                            </span>
+
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {formatDate(p.created_at)} ({timeAgo(p.created_at)})
+                            </span>
+                          </div>
+
+                          {/* Status changer directly to Supabase */}
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={p.status}
+                              onChange={(e) => setEngineeringStatus(p.id, e.target.value)}
+                              className="rounded-xl border px-3 py-1 text-xs font-bold outline-none transition-colors cursor-pointer border-primary/40 bg-primary/15 text-primary hover:border-primary"
+                            >
+                              {requestStatuses.map((st) => (
+                                <option key={st.value} value={st.value} className="bg-surface text-foreground font-medium">
+                                  {isAr ? st.labelAr : st.labelEn}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              onClick={() => removeProjectRequest(p.id)}
+                              aria-label="Delete"
+                              title={lang === "ar" ? "حذف طلب المشروع" : "Delete project request"}
+                              className="flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Student / Client Row */}
+                        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-y border-border/40 py-2.5">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-bold text-base text-foreground flex items-center gap-1.5">
+                              <User className="size-4 text-primary" />
+                              {p.full_name}
+                            </span>
+                            {(p.university || p.department) && (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-surface/80 px-2 py-0.5 text-xs text-muted-foreground border border-border/50 font-medium">
+                                <Building className="size-3 text-primary" />
+                                {[p.university, p.department].filter(Boolean).join(" — ")}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
+                            <a href={`mailto:${p.email}`} className="text-primary hover:underline flex items-center gap-1 font-mono">
+                              <Mail className="size-3" />
+                              {p.email}
+                            </a>
+                            <a href={`tel:${p.phone}`} className="text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono">
+                              <Phone className="size-3" />
+                              {p.phone}
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* Project Details */}
+                        <div>
+                          <h4 className="font-bold text-sm text-foreground mb-1">{p.project_title}</h4>
+                          <div className="rounded-2xl bg-surface/50 p-4 border border-border/40 text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                            {p.project_description}
+                          </div>
+                        </div>
+
+                        {/* Meta Tags: Budget, Stage, Deadline */}
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          {p.current_stage && (
+                            <span className="rounded-lg bg-surface/70 px-2.5 py-1 text-muted-foreground border border-border/40">
+                              <strong>{isAr ? "المرحلة:" : "Stage:"}</strong> {p.current_stage}
+                            </span>
+                          )}
+                          {(p.budget_min || p.budget_max) && (
+                            <span className="rounded-lg bg-surface/70 px-2.5 py-1 text-gold border border-gold/30 font-mono">
+                              <strong>{isAr ? "الميزانية المتوقعة:" : "Budget:"}</strong> {p.budget_min?.toLocaleString()} – {p.budget_max?.toLocaleString()} {p.budget_currency || "EGP"}
+                            </span>
+                          )}
+                          {p.deadline && (
+                            <span className="rounded-lg bg-surface/70 px-2.5 py-1 text-primary border border-primary/30">
+                              <strong>{isAr ? "الموعد المستهدف:" : "Deadline:"}</strong> {p.deadline}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Attachments if any */}
+                        {p.files && p.files.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
+                            <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1">
+                              <FileCheck className="size-3.5 text-primary" />
+                              {isAr ? "المستندات الهندسية المرفقة:" : "Attached Files:"}
+                            </span>
+                            {p.files.map((f) => (
+                              <a
+                                key={f.id}
+                                href={f.file_path}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-primary/15 px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/25 transition-colors border border-primary/25"
+                              >
+                                <Download className="size-3" />
+                                <span className="truncate max-w-[180px]">{f.file_name}</span>
+                              </a>
+                            ))}
                           </div>
                         )}
 
-                        {r.file_url && (
-                          <a
-                            href={r.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download
-                            className="group inline-flex items-center gap-3 rounded-2xl border border-border bg-surface/70 p-2 text-xs text-foreground transition-all hover:border-primary hover:bg-surface"
+                        {/* Action buttons */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={`mailto:${p.email}?subject=${encodeURIComponent(`YSMED — Project ${p.reference_number}`)}`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition-colors"
+                            >
+                              <Send className="size-3.5 text-primary" />
+                              {t("emailClient")}
+                            </a>
+
+                            {whatsappUrl && (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              >
+                                <Phone className="size-3.5" />
+                                {t("whatsapp")}
+                              </a>
+                            )}
+
+                            <Button asChild variant="outline" size="sm" className="rounded-xl text-xs gap-1.5 border-primary/30 text-primary">
+                              <Link to="/admin/engineering-requests">
+                                <Sparkles className="size-3.5" />
+                                <span>{isAr ? "فتح غرفة العمليات والمقايسات" : "Full Engineering Suite"}</span>
+                                <ExternalLink className="size-3" />
+                              </Link>
+                            </Button>
+                          </div>
+
+                          <Button
+                            variant="hero"
+                            size="sm"
+                            onClick={() => setSelectedProjectRequest(p)}
+                            className="rounded-xl text-xs flex items-center gap-1.5 shadow-glow"
                           >
-                            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-gold/15 text-gold">
-                              <FileText className="size-6" />
-                            </div>
-                            <div className="min-w-0 pe-3">
-                              <p className="font-semibold text-foreground group-hover:text-primary truncate max-w-[200px]">
-                                {r.file_name || t("viewFile")}
-                              </p>
-                              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                                <Download className="size-3 text-gold" />
-                                {t("viewFile")}
-                              </p>
-                            </div>
-                          </a>
-                        )}
+                            <Eye className="size-3.5" />
+                            {t("viewDetails")}
+                          </Button>
+                        </div>
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+              )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <a
-                          href={mailtoUrl}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition-colors"
-                        >
-                          <Send className="size-3.5 text-primary" />
-                          {t("emailClient")}
-                        </a>
-
-                        {whatsappUrl && (
-                          <a
-                            href={whatsappUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-                          >
-                            <Phone className="size-3.5" />
-                            {t("whatsapp")}
-                          </a>
-                        )}
-
-                        <button
-                          onClick={() => copyContactInfo(r)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <Copy className="size-3.5" />
-                          {t("copyInfo")}
-                        </button>
-                      </div>
-
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedInquiry(r)}
-                        className="rounded-xl text-xs flex items-center gap-1.5"
-                      >
-                        <Eye className="size-3.5" />
-                        {t("viewDetails")}
-                      </Button>
+              {/* 2. SMART HOMES INQUIRIES & ORDERS LIST */}
+              {(requestServiceFilter === "smart-homes" || requestServiceFilter === "all") && (
+                <div className="space-y-4">
+                  {requestServiceFilter === "all" && (
+                    <div className="flex items-center gap-2 pt-4 border-b border-border/40 pb-2">
+                      <Sparkles className="size-4 text-gold" />
+                      <h3 className="font-bold text-sm text-foreground">
+                        {t("smartHomes")} ({filteredSmartHomeInquiries.length})
+                      </h3>
                     </div>
-                  </div>
-                );
-              })}
+                  )}
+
+                  {requestServiceFilter === "smart-homes" && filteredSmartHomeInquiries.length === 0 && (
+                    <div className="glass rounded-3xl p-12 text-center text-muted-foreground border border-border/60">
+                      <Sparkles className="size-12 mx-auto mb-3 opacity-30 text-gold" />
+                      <p className="text-base font-semibold">
+                        {lang === "ar"
+                          ? "لا توجد طلبات للمنازل الذكية مطابقة للفلاتر الحالية"
+                          : "No smart home requests match current filters"}
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredSmartHomeInquiries.map((r) => {
+                    const isStoreOrder = r.kind === "smart_home_order";
+                    const whatsappUrl = getWhatsAppUrl(r.phone, r.name);
+                    const mailtoUrl = getMailtoUrl(r);
+
+                    return (
+                      <div
+                        key={r.id}
+                        className="glass rounded-3xl p-5 sm:p-6 border border-gold/30 transition-all hover:border-gold hover:shadow-gold space-y-4"
+                      >
+                        {/* Header */}
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="rounded-full px-3 py-1 font-bold bg-gold/20 text-gold border border-gold/40 flex items-center gap-1.5">
+                              <Sparkles className="size-3.5" />
+                              <span>
+                                {isStoreOrder
+                                  ? isAr ? "طلب شراء أجهزة من المتجر الذكي" : "Smart Store Order"
+                                  : isAr ? "طلب مقايسة توريد وتركيب منزل ذكي" : "Smart Home Installation Quote"}
+                              </span>
+                            </span>
+
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {formatDate(r.created_at)} ({timeAgo(r.created_at)})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={r.status}
+                              onChange={(e) => setStatus(r.id, e.target.value)}
+                              className={`rounded-xl border px-3 py-1 text-xs font-semibold outline-none transition-colors cursor-pointer ${
+                                r.status === "done"
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                  : r.status === "in_progress"
+                                  ? "border-gold/40 bg-gold/10 text-gold"
+                                  : "border-blue-500/40 bg-blue-500/10 text-blue-400"
+                              }`}
+                            >
+                              {statuses.map((s) => (
+                                <option key={s} value={s} className="bg-surface text-foreground font-medium">
+                                  {t(`st_${s}` as "st_new")}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              onClick={() => removeInquiry(r.id)}
+                              aria-label="Delete"
+                              title={lang === "ar" ? "حذف الطلب" : "Delete request"}
+                              className="flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Customer Row */}
+                        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-y border-border/40 py-2.5">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-bold text-base text-foreground">{r.name}</span>
+                            {r.company && (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-surface/80 px-2 py-0.5 text-xs text-muted-foreground border border-border/50">
+                                <MapPin className="size-3 text-gold" />
+                                {r.company}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
+                            <a href={`mailto:${r.email}`} className="text-primary hover:underline flex items-center gap-1 font-mono">
+                              <Mail className="size-3" />
+                              {r.email}
+                            </a>
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`} className="text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono">
+                                <Phone className="size-3" />
+                                {r.phone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Message / Order details */}
+                        <div className="rounded-2xl bg-surface/50 p-4 border border-border/40 text-xs text-foreground/90 whitespace-pre-line leading-relaxed font-mono">
+                          {r.message}
+                        </div>
+
+                        {/* Architectural floor plan or attachment */}
+                        {(r.file_url || r.photo_url) && (
+                          <div className="flex flex-wrap items-center gap-3 pt-1">
+                            {r.file_url && (
+                              <a
+                                href={r.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="inline-flex items-center gap-2 rounded-xl bg-gold/15 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/25 transition-colors border border-gold/30"
+                              >
+                                <Download className="size-3.5" />
+                                <span>{r.file_name || (isAr ? "تحميل المخطط المعماري المرفق" : "Download Attached Floor Plan")}</span>
+                              </a>
+                            )}
+                            {r.photo_url && (
+                              <div
+                                onClick={() => setPreviewPhoto(r.photo_url || null)}
+                                className="group inline-flex items-center gap-2 rounded-xl border border-border bg-surface/70 px-3 py-1.5 text-xs transition-all hover:border-gold cursor-pointer"
+                              >
+                                <Eye className="size-3.5 text-gold" />
+                                <span className="font-semibold text-foreground group-hover:text-gold">{t("viewPhoto")}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={mailtoUrl}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-gold hover:text-gold transition-colors"
+                            >
+                              <Send className="size-3.5 text-gold" />
+                              {t("emailClient")}
+                            </a>
+
+                            {whatsappUrl && (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              >
+                                <Phone className="size-3.5" />
+                                {t("whatsapp")}
+                              </a>
+                            )}
+
+                            <button
+                              onClick={() => copyContactInfo(r)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Copy className="size-3.5" />
+                              {t("copyInfo")}
+                            </button>
+                          </div>
+
+                          <Button
+                            variant="gold"
+                            size="sm"
+                            onClick={() => setSelectedInquiry(r)}
+                            className="rounded-xl text-xs flex items-center gap-1.5 shadow-gold font-bold"
+                          >
+                            <Eye className="size-3.5" />
+                            {t("viewDetails")}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 3. INNOVATIVE SOLUTIONS INQUIRIES LIST */}
+              {(requestServiceFilter === "solutions" || requestServiceFilter === "all") && (
+                <div className="space-y-4">
+                  {requestServiceFilter === "all" && (
+                    <div className="flex items-center gap-2 pt-4 border-b border-border/40 pb-2">
+                      <Cpu className="size-4 text-primary" />
+                      <h3 className="font-bold text-sm text-foreground">
+                        {t("solutions")} ({filteredSolutionsInquiries.length})
+                      </h3>
+                    </div>
+                  )}
+
+                  {requestServiceFilter === "solutions" && filteredSolutionsInquiries.length === 0 && (
+                    <div className="glass rounded-3xl p-12 text-center text-muted-foreground border border-border/60">
+                      <Cpu className="size-12 mx-auto mb-3 opacity-30 text-primary" />
+                      <p className="text-base font-semibold">
+                        {lang === "ar"
+                          ? "لا توجد طلبات للحلول المبتكرة مطابقة للفلاتر الحالية"
+                          : "No innovative solutions inquiries match current filters"}
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredSolutionsInquiries.map((r) => {
+                    const sector = getSector(r.sector);
+                    const SectorIcon = sector?.icon || Building;
+                    const whatsappUrl = getWhatsAppUrl(r.phone, r.name);
+                    const mailtoUrl = getMailtoUrl(r);
+
+                    return (
+                      <div
+                        key={r.id}
+                        className="glass rounded-3xl p-5 sm:p-6 border border-border/80 transition-all hover:border-primary/50 hover:shadow-glow space-y-4"
+                      >
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span
+                              className={`rounded-full px-3 py-1 font-bold ${
+                                r.kind === "request"
+                                  ? "bg-primary/20 text-primary border border-primary/30"
+                                  : "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                              }`}
+                            >
+                              {r.kind === "request" ? t("request") : t("contact")}
+                            </span>
+
+                            {sector && (
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1 text-primary font-medium border border-primary/30">
+                                <SectorIcon className="size-3.5" />
+                                {tl(sector.title)}
+                              </span>
+                            )}
+
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              <Clock className="size-3" />
+                              {formatDate(r.created_at)} ({timeAgo(r.created_at)})
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <select
+                              value={r.status}
+                              onChange={(e) => setStatus(r.id, e.target.value)}
+                              className={`rounded-xl border px-3 py-1 text-xs font-semibold outline-none transition-colors cursor-pointer ${
+                                r.status === "done"
+                                  ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                                  : r.status === "in_progress"
+                                  ? "border-gold/40 bg-gold/10 text-gold"
+                                  : "border-blue-500/40 bg-blue-500/10 text-blue-400"
+                              }`}
+                            >
+                              {statuses.map((s) => (
+                                <option key={s} value={s} className="bg-surface text-foreground font-medium">
+                                  {t(`st_${s}` as "st_new")}
+                                </option>
+                              ))}
+                            </select>
+
+                            <button
+                              onClick={() => removeInquiry(r.id)}
+                              aria-label="Delete"
+                              title={lang === "ar" ? "حذف الرسالة" : "Delete message"}
+                              className="flex size-8 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 border-y border-border/40 py-2.5">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-bold text-base text-foreground">{r.name}</span>
+                            {r.company && (
+                              <span className="inline-flex items-center gap-1 rounded-lg bg-surface/80 px-2 py-0.5 text-xs text-muted-foreground border border-border/50">
+                                <Building className="size-3 text-primary" />
+                                {r.company}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-3 text-xs">
+                            <a href={`mailto:${r.email}`} className="text-primary hover:underline flex items-center gap-1 font-mono">
+                              <Mail className="size-3" />
+                              {r.email}
+                            </a>
+                            {r.phone && (
+                              <a href={`tel:${r.phone}`} className="text-muted-foreground hover:text-foreground flex items-center gap-1 font-mono">
+                                <Phone className="size-3" />
+                                {r.phone}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="rounded-2xl bg-surface/50 p-4 border border-border/40 text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                          {r.message}
+                        </div>
+
+                        {(r.photo_url || r.file_url) && (
+                          <div className="flex flex-wrap items-center gap-3 pt-1">
+                            {r.photo_url && (
+                              <div
+                                onClick={() => setPreviewPhoto(r.photo_url || null)}
+                                className="group inline-flex items-center gap-3 rounded-2xl border border-border bg-surface/70 p-2 text-xs transition-all hover:border-primary cursor-pointer hover:bg-surface"
+                              >
+                                <img
+                                  src={r.photo_url}
+                                  alt="Attached photo thumbnail"
+                                  className="size-12 rounded-xl object-cover border border-border"
+                                />
+                                <div className="pe-2">
+                                  <p className="font-semibold text-foreground group-hover:text-primary flex items-center gap-1">
+                                    <Eye className="size-3.5" />
+                                    {t("viewPhoto")}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+
+                            {r.file_url && (
+                              <a
+                                href={r.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download
+                                className="group inline-flex items-center gap-3 rounded-2xl border border-border bg-surface/70 p-2 text-xs text-foreground transition-all hover:border-primary hover:bg-surface"
+                              >
+                                <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                                  <FileText className="size-6" />
+                                </div>
+                                <div className="min-w-0 pe-3">
+                                  <p className="font-semibold text-foreground group-hover:text-primary truncate max-w-[200px]">
+                                    {r.file_name || t("viewFile")}
+                                  </p>
+                                  <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                    <Download className="size-3 text-primary" />
+                                    {t("viewFile")}
+                                  </p>
+                                </div>
+                              </a>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-border/40">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <a
+                              href={mailtoUrl}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition-colors"
+                            >
+                              <Send className="size-3.5 text-primary" />
+                              {t("emailClient")}
+                            </a>
+
+                            {whatsappUrl && (
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              >
+                                <Phone className="size-3.5" />
+                                {t("whatsapp")}
+                              </a>
+                            )}
+
+                            <button
+                              onClick={() => copyContactInfo(r)}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              <Copy className="size-3.5" />
+                              {t("copyInfo")}
+                            </button>
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedInquiry(r)}
+                            className="rounded-xl text-xs flex items-center gap-1.5"
+                          >
+                            <Eye className="size-3.5" />
+                            {t("viewDetails")}
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -3862,6 +4668,191 @@ function Page() {
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedInquiry(null)}
+                  className="rounded-xl text-xs"
+                >
+                  {t("close")}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          MODAL: GRADUATION PROJECT REQUEST FULL DETAILS MODAL
+      ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog
+        open={!!selectedProjectRequest}
+        onOpenChange={(open) => !open && setSelectedProjectRequest(null)}
+      >
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto glass glow-border rounded-3xl border-border/80 p-6">
+          {selectedProjectRequest && (
+            <div className="space-y-5">
+              <DialogHeader>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="font-mono text-xs font-bold text-primary rounded-lg bg-primary/10 px-2.5 py-1 border border-primary/25">
+                    {selectedProjectRequest.reference_number}
+                  </span>
+                  <span className="rounded-full px-2.5 py-0.5 text-xs font-semibold bg-primary/15 text-primary border border-primary/25">
+                    {selectedProjectRequest.project_category}
+                  </span>
+                  <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs text-muted-foreground border border-border/50">
+                    {selectedProjectRequest.urgency}
+                  </span>
+                </div>
+                <DialogTitle className="text-xl font-bold text-foreground">
+                  {selectedProjectRequest.project_title}
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  {t("submissionDate")}: {formatDate(selectedProjectRequest.created_at)} ({timeAgo(selectedProjectRequest.created_at)})
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Status Update Banner */}
+              <div className="flex items-center justify-between rounded-2xl bg-surface/60 p-4 border border-border/40">
+                <span className="text-xs font-semibold text-foreground">
+                  {lang === "ar" ? "حالة طلب المشروع في Supabase:" : "Supabase Project Status:"}
+                </span>
+                <select
+                  value={selectedProjectRequest.status}
+                  onChange={(e) => setEngineeringStatus(selectedProjectRequest.id, e.target.value)}
+                  className="rounded-xl border border-primary/40 bg-surface px-3 py-1.5 text-xs font-bold text-primary outline-none cursor-pointer"
+                >
+                  {requestStatuses.map((st) => (
+                    <option key={st.value} value={st.value} className="bg-surface text-foreground font-medium">
+                      {isAr ? st.labelAr : st.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Student & Academic Info */}
+              <div className="grid gap-3 sm:grid-cols-2 rounded-2xl bg-surface/40 p-4 border border-border/40 text-xs">
+                <div>
+                  <span className="text-muted-foreground block">{lang === "ar" ? "اسم الطالب / العميل" : "Student / Client Name"}</span>
+                  <span className="font-semibold text-foreground text-sm flex items-center gap-1.5 mt-0.5">
+                    <User className="size-3.5 text-primary" />
+                    {selectedProjectRequest.full_name} ({selectedProjectRequest.user_type})
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block">{lang === "ar" ? "الجامعة والكلية / القسم" : "University & Department"}</span>
+                  <span className="font-semibold text-foreground text-sm flex items-center gap-1.5 mt-0.5">
+                    <Building className="size-3.5 text-primary" />
+                    {[selectedProjectRequest.university, selectedProjectRequest.department].filter(Boolean).join(" — ") || "—"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block">{t("email")}</span>
+                  <a href={`mailto:${selectedProjectRequest.email}`} className="text-primary hover:underline font-mono">
+                    {selectedProjectRequest.email}
+                  </a>
+                </div>
+
+                <div>
+                  <span className="text-muted-foreground block">{t("phone")} / واتساب</span>
+                  <span className="font-mono text-foreground font-medium">
+                    {selectedProjectRequest.phone} {selectedProjectRequest.whatsapp && `(WA: ${selectedProjectRequest.whatsapp})`}
+                  </span>
+                </div>
+              </div>
+
+              {/* Technical Specifications */}
+              <div className="rounded-2xl bg-surface/40 p-4 border border-border/40 space-y-2 text-xs">
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
+                  <span><strong>{isAr ? "المرحلة الحالية:" : "Stage:"}</strong> {selectedProjectRequest.current_stage}</span>
+                  {(selectedProjectRequest.budget_min || selectedProjectRequest.budget_max) && (
+                    <span className="text-gold font-mono font-semibold">
+                      <strong>{isAr ? "الميزانية:" : "Budget:"}</strong> {selectedProjectRequest.budget_min?.toLocaleString()} – {selectedProjectRequest.budget_max?.toLocaleString()} {selectedProjectRequest.budget_currency || "EGP"}
+                    </span>
+                  )}
+                  {selectedProjectRequest.deadline && (
+                    <span className="text-primary font-semibold">
+                      <strong>{isAr ? "الموعد النهائي:" : "Deadline:"}</strong> {selectedProjectRequest.deadline}
+                    </span>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-border/30">
+                  <span className="text-muted-foreground block mb-1 font-semibold">{lang === "ar" ? "وصف المشروع والمواصفات الفنية:" : "Project Description:"}</span>
+                  <div className="rounded-xl bg-surface/70 p-3.5 text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                    {selectedProjectRequest.project_description}
+                  </div>
+                </div>
+
+                {selectedProjectRequest.technical_challenges && (
+                  <div className="pt-1">
+                    <span className="text-muted-foreground block mb-1 font-semibold">{lang === "ar" ? "التحديات الهندسية المطلوبة:" : "Technical Challenges:"}</span>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {selectedProjectRequest.technical_challenges}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Attachments if any */}
+              {selectedProjectRequest.files && selectedProjectRequest.files.length > 0 && (
+                <div className="rounded-2xl bg-surface/40 p-4 border border-border/40 space-y-2 text-xs">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <FileCheck className="size-4 text-primary" />
+                    {lang === "ar" ? "المستندات والمخططات المرفقة:" : "Attached Project Files:"}
+                  </span>
+                  <div className="grid gap-2 sm:grid-cols-2 pt-1">
+                    {selectedProjectRequest.files.map((file) => (
+                      <a
+                        key={file.id}
+                        href={file.file_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        download
+                        className="flex items-center gap-2.5 rounded-xl border border-border/70 bg-surface/70 p-2.5 hover:border-primary transition-colors"
+                      >
+                        <FileText className="size-5 text-primary shrink-0" />
+                        <span className="truncate font-medium text-foreground">{file.file_name}</span>
+                        <Download className="size-3.5 text-muted-foreground ms-auto shrink-0" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-border/40">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild variant="hero" size="sm" className="rounded-xl shadow-glow gap-1.5 font-bold text-xs">
+                    <Link to="/admin/engineering-requests">
+                      <Sparkles className="size-3.5" />
+                      <span>{lang === "ar" ? "فتح غرفة العمليات والمقايسة" : "Open Engineering Suite"}</span>
+                      <ExternalLink className="size-3" />
+                    </Link>
+                  </Button>
+
+                  <a
+                    href={`mailto:${selectedProjectRequest.email}?subject=${encodeURIComponent(`YSMED — Project ${selectedProjectRequest.reference_number}`)}`}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <Mail className="size-3.5 text-primary" />
+                    {t("emailClient")}
+                  </a>
+
+                  {(selectedProjectRequest.whatsapp || selectedProjectRequest.phone) && (
+                    <a
+                      href={`https://wa.me/${(selectedProjectRequest.whatsapp || selectedProjectRequest.phone).replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                    >
+                      <Phone className="size-3.5" />
+                      {t("whatsapp")}
+                    </a>
+                  )}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedProjectRequest(null)}
                   className="rounded-xl text-xs"
                 >
                   {t("close")}
