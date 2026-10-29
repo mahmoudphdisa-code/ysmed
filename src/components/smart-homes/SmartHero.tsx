@@ -123,7 +123,7 @@ export function SmartHero() {
             {/* Detailed Description */}
             <p className="text-sm sm:text-base text-muted-foreground leading-relaxed max-w-2xl">
               {lang === "ar"
-                ? "اكتشف أحدث تقنيات المنازل الذكية من YSMED إحدى شركات مجموعة مجدي. تحكم في الإضاءة والأمان والتكييف والترفيه والستائر من أي مكان بالعالم. تسوق أحدث الأجهزة الذكية أو دع مهندسينا يصممون وينفذون نظاماً متكاملاً مصمماً خصيصاً لعقارك."
+                ? "اكتشف أحدث تقنيات المنازل الذكية من YSMED إحدى شركات مجدي جروب. تحكم في الإضاءة والأمان والتكييف والترفيه والستائر من أي مكان بالعالم. تسوق أحدث الأجهزة الذكية أو دع مهندسينا يصممون وينفذون نظاماً متكاملاً مصمماً خصيصاً لعقارك."
                 : "Discover advanced smart home technologies from YSMED, a member of Magdy Group. Control your lighting, security, climate, entertainment, and appliances from anywhere. Shop smart devices or let our specialists design and install a complete intelligent system tailored to your property."}
             </p>
 
@@ -218,9 +218,8 @@ export function SmartHero() {
                 <img
                   src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80"
                   alt="Modern Luxury Smart Living Room"
-                  className={`h-full w-full object-cover transition-all duration-700 ${
-                    lightsOn ? "brightness-100 contrast-105" : "brightness-[0.35] contrast-90"
-                  }`}
+                  className={`h-full w-full object-cover transition-all duration-700 ${lightsOn ? "brightness-100 contrast-105" : "brightness-[0.35] contrast-90"
+                    }`}
                 />
 
                 {/* Simulated Ambient Light Overlay */}
@@ -246,9 +245,8 @@ export function SmartHero() {
                     {/* Node 2: Smart Curtains */}
                     <div className="absolute top-[28%] end-[16%] flex items-center gap-1.5">
                       <span
-                        className={`size-2 rounded-full ${
-                          curtainsOpen ? "bg-emerald-400" : "bg-gold"
-                        } shadow-glow`}
+                        className={`size-2 rounded-full ${curtainsOpen ? "bg-emerald-400" : "bg-gold"
+                          } shadow-glow`}
                       />
                       <span className="rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
                         {curtainsOpen
@@ -256,8 +254,8 @@ export function SmartHero() {
                             ? "الستائر: مفتوحة"
                             : "Curtains: Open"
                           : lang === "ar"
-                          ? "الستائر: مغلقة"
-                          : "Curtains: Closed"}
+                            ? "الستائر: مغلقة"
+                            : "Curtains: Closed"}
                       </span>
                     </div>
 
@@ -273,9 +271,8 @@ export function SmartHero() {
 
                 {/* Virtual Curtain Graphic Layer */}
                 <div
-                  className={`absolute inset-y-0 end-0 bg-slate-900/85 backdrop-blur-sm border-s border-white/20 transition-all duration-700 pointer-events-none flex items-center justify-center ${
-                    curtainsOpen ? "w-0 opacity-0" : "w-1/3 opacity-100"
-                  }`}
+                  className={`absolute inset-y-0 end-0 bg-slate-900/85 backdrop-blur-sm border-s border-white/20 transition-all duration-700 pointer-events-none flex items-center justify-center ${curtainsOpen ? "w-0 opacity-0" : "w-1/3 opacity-100"
+                    }`}
                 >
                   <Blinds className="size-6 text-muted-foreground opacity-50" />
                 </div>
@@ -287,20 +284,18 @@ export function SmartHero() {
                 <div className="grid grid-cols-2 gap-2.5">
                   <button
                     onClick={() => setLightsOn(!lightsOn)}
-                    className={`flex items-center justify-between rounded-2xl p-3 border text-xs font-bold transition-all ${
-                      lightsOn
+                    className={`flex items-center justify-between rounded-2xl p-3 border text-xs font-bold transition-all ${lightsOn
                         ? "bg-primary/15 border-primary/40 text-primary shadow-glow"
                         : "bg-surface/60 border-border text-muted-foreground hover:text-foreground"
-                    }`}
+                      }`}
                   >
                     <span className="flex items-center gap-2">
                       <Sun className="size-4" />
                       {lang === "ar" ? "إضاءة الغرفة" : "Room Lights"}
                     </span>
                     <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        lightsOn ? "bg-primary text-background" : "bg-surface"
-                      }`}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${lightsOn ? "bg-primary text-background" : "bg-surface"
+                        }`}
                     >
                       {lightsOn ? (lang === "ar" ? "تشغيل" : "ON") : (lang === "ar" ? "إيقاف" : "OFF")}
                     </span>
@@ -308,11 +303,10 @@ export function SmartHero() {
 
                   <button
                     onClick={() => setCurtainsOpen(!curtainsOpen)}
-                    className={`flex items-center justify-between rounded-2xl p-3 border text-xs font-bold transition-all ${
-                      curtainsOpen
+                    className={`flex items-center justify-between rounded-2xl p-3 border text-xs font-bold transition-all ${curtainsOpen
                         ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
                         : "bg-gold/15 border-gold/40 text-gold"
-                    }`}
+                      }`}
                   >
                     <span className="flex items-center gap-2">
                       <Blinds className="size-4" />
@@ -324,8 +318,8 @@ export function SmartHero() {
                           ? "مفتوحة"
                           : "Open"
                         : lang === "ar"
-                        ? "مغلقة"
-                        : "Closed"}
+                          ? "مغلقة"
+                          : "Closed"}
                     </span>
                   </button>
                 </div>
@@ -346,20 +340,19 @@ export function SmartHero() {
                           setLightColor(c);
                           if (!lightsOn) setLightsOn(true);
                         }}
-                        className={`h-8 rounded-xl border transition-all flex items-center justify-center gap-1.5 text-[11px] font-semibold ${
-                          lightColor === c && lightsOn
+                        className={`h-8 rounded-xl border transition-all flex items-center justify-center gap-1.5 text-[11px] font-semibold ${lightColor === c && lightsOn
                             ? "border-white ring-2 ring-primary/50 shadow-glow"
                             : "border-border/60 hover:border-border"
-                        }`}
+                          }`}
                         style={{
                           background:
                             c === "cyan"
                               ? "#04B8F4"
                               : c === "warm"
-                              ? "#fde047"
-                              : c === "gold"
-                              ? "#FFD000"
-                              : "#c084fc",
+                                ? "#fde047"
+                                : c === "gold"
+                                  ? "#FFD000"
+                                  : "#c084fc",
                           color: "#080D16",
                         }}
                       >
@@ -389,11 +382,10 @@ export function SmartHero() {
                         <button
                           key={s.id}
                           onClick={() => handleSceneChange(s.id as SceneMode)}
-                          className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[11px] font-semibold transition-all ${
-                            active
+                          className={`flex flex-col items-center justify-center p-2 rounded-xl border text-[11px] font-semibold transition-all ${active
                               ? "bg-primary text-background border-primary shadow-glow"
                               : "bg-surface/60 border-border text-muted-foreground hover:text-foreground"
-                          }`}
+                            }`}
                         >
                           <Icon className="size-3.5 mb-1" />
                           <span>{s.label}</span>

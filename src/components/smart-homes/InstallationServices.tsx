@@ -61,7 +61,7 @@ export function InstallationServices() {
 
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
             {lang === "ar"
-              ? "فريق YSMED، إحدى شركات مجموعة مجدي، يمتلك خبرة هندسية عريقة في توريد وتصميم وتركيب وبرمجة كافة أنظمة المباني الذكية للشقق والفيلات والمشروعات الفندقية والتجارية."
+              ? "فريق YSMED، إحدى شركات مجدي جروب، يمتلك خبرة هندسية عريقة في توريد وتصميم وتركيب وبرمجة كافة أنظمة المباني الذكية للشقق والفيلات والمشروعات الفندقية والتجارية."
               : "YSMED, a member of Magdy Group, provides comprehensive engineering: from electrical layout design and neutral wire infrastructure planning to device supply, physical installation, and after-sales warranty."}
           </p>
         </div>

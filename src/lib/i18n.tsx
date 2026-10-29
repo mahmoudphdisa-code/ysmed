@@ -19,7 +19,7 @@ const dict = {
   heroTitle: { en: "Engineering Smarter Solutions for a Better Future", ar: "نطور حلولاً أذكى لمستقبل أفضل" },
   heroText: {
     en: "YSMED for Innovative Solutions, a Magdy Group company, delivers integrated smart technologies, engineering automation, intelligent infrastructure, renewable energy systems, and reliable power solutions across diverse industries.",
-    ar: "تقدم YSMED للحلول المبتكرة، إحدى شركات مجموعة مجدي، تقنيات ذكية متكاملة وأتمتة هندسية وبنية تحتية ذكية وأنظمة طاقة متجددة وحلول طاقة موثوقة لمختلف القطاعات.",
+    ar: "تقدم YSMED للحلول المبتكرة، إحدى شركات  مجدي جروب، تقنيات ذكية متكاملة وأتمتة هندسية وبنية تحتية ذكية وأنظمة طاقة متجددة وحلول طاقة موثوقة لمختلف القطاعات.",
   },
   explore: { en: "Explore Our Solutions", ar: "استكشف حلولنا" },
   viewProjects: { en: "View Our Projects", ar: "شاهد مشاريعنا" },
@@ -34,7 +34,7 @@ const dict = {
   viewSolution: { en: "View solution", ar: "عرض الحل" },
   ctaTitle: { en: "Have a project in mind?", ar: "لديك مشروع في ذهنك؟" },
   ctaText: { en: "Tell us about your goals and our engineers will design the right solution.", ar: "أخبرنا بأهدافك وسيصمم مهندسونا الحل المناسب." },
-  magdy: { en: "A Magdy Group Company", ar: "إحدى شركات مجموعة مجدي" },
+  magdy: { en: "A Magdy Group Company", ar: "إحدى شركات مجدي جروب" },
   skip: { en: "Skip", ar: "تخطي" },
   rights: { en: "All rights reserved.", ar: "جميع الحقوق محفوظة." },
   concept: { en: "Solution Concept", ar: "تصور للحل" },

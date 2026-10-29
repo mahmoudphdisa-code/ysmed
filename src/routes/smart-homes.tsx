@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ShoppingCart,
   Heart,
@@ -57,6 +57,15 @@ function SmartHomesPage() {
   const [customizerPackage, setCustomizerPackage] = useState<SmartPackage | null>(null);
 
   // Handlers
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window.location.hash === "#quote" || window.location.hash === "#installation-quote")) {
+      setTimeout(() => {
+        const el = document.getElementById("quote");
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, []);
+
   const handleCustomizePackage = useCallback((pkg: SmartPackage) => {
     setCustomizerPackage(pkg);
     const el = document.getElementById("customizer");

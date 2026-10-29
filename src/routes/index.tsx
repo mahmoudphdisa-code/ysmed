@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Cpu } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, Cpu, GraduationCap, Sparkles, ChevronRight } from "lucide-react";
 import hero from "@/assets/hero.jpg";
 import logo from "@/assets/ysmed-logo.png";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,13 @@ import { Section } from "@/components/site/Layout";
 import { useI18n } from "@/lib/i18n";
 import { solutions, capabilities } from "@/data/solutions";
 import { CompanyProfileSection } from "@/components/site/CompanyProfileSection";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -61,7 +69,8 @@ export function SolutionCard({ s }: { s: (typeof solutions)[number] }) {
 }
 
 function Index() {
-  const { t, tl } = useI18n();
+  const { t, tl, lang } = useI18n();
+  const [serviceModalOpen, setServiceModalOpen] = useState(false);
   return (
     <>
       {/* ─── Hero ─────────────────────────────────────────────────────────── */}
@@ -93,8 +102,14 @@ function Index() {
               <Button asChild variant="hero" size="xl" className="w-full sm:w-auto">
                 <Link to="/solutions">{t("explore")}</Link>
               </Button>
-              <Button asChild variant="gold" size="xl" className="w-full sm:w-auto">
-                <Link to="/request">{t("request")}</Link>
+              <Button
+                type="button"
+                variant="gold"
+                size="xl"
+                onClick={() => setServiceModalOpen(true)}
+                className="w-full sm:w-auto shadow-glow cursor-pointer"
+              >
+                {t("request")}
               </Button>
             </div>
           </div>
@@ -174,11 +189,122 @@ function Index() {
           <p className="relative mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:mt-4 sm:text-base">
             {t("ctaText")}
           </p>
-          <Button asChild variant="gold" size="xl" className="relative mt-6 w-full sm:mt-8 sm:w-auto">
-            <Link to="/request">{t("request")}</Link>
+          <Button
+            type="button"
+            variant="gold"
+            size="xl"
+            onClick={() => setServiceModalOpen(true)}
+            className="relative mt-6 w-full sm:mt-8 sm:w-auto shadow-glow cursor-pointer"
+          >
+            {t("request")}
           </Button>
         </div>
       </Section>
+
+      {/* ─── Service Track Selection Modal ────────────────────────────── */}
+      <Dialog open={serviceModalOpen} onOpenChange={setServiceModalOpen}>
+        <DialogContent className="sm:max-w-2xl bg-background/95 backdrop-blur-2xl border-border/80 p-6 sm:p-8 rounded-3xl shadow-2xl">
+          <DialogHeader className="text-start space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3.5 py-1 text-xs font-bold text-gold w-fit">
+              <Sparkles className="size-3.5" />
+              <span>{lang === "ar" ? "مسارات طلب المشاريع والخدمات" : "Service Request Tracks"}</span>
+            </div>
+            <DialogTitle className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight">
+              {lang === "ar" ? "اختر نوع الخدمة التي ترغب بطلبها" : "Select the Service You Wish to Request"}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              {lang === "ar"
+                ? "يرجى تحديد مسار الخدمة المطلوب لنقلك مباشرة إلى قسم ونموذج الطلب والمقايسة الخاص بها:"
+                : "Please choose your required service to navigate directly to its dedicated request form:"}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-3.5 sm:gap-4 mt-2">
+            {/* 1. Graduation Project Services */}
+            <Link
+              to="/engineering-services"
+              hash="submit-request"
+              onClick={() => setServiceModalOpen(false)}
+              className="group relative flex items-start gap-4 rounded-2xl border border-primary/30 bg-surface/50 p-4 sm:p-5 transition-all hover:bg-surface hover:border-primary hover:shadow-glow cursor-pointer"
+            >
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary border border-primary/25 transition-transform group-hover:scale-105">
+                <GraduationCap className="size-6" />
+              </div>
+              <div className="flex-1 min-w-0 text-start">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-sm sm:text-base text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+                    <span>{lang === "ar" ? "خدمات مشاريع التخرج" : "Graduation Project Services"}</span>
+                  </h4>
+                  <span className="text-[11px] font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline-flex items-center gap-1">
+                    {lang === "ar" ? "تقديم الطلب" : "Go to Form"}
+                    <ChevronRight className="size-3.5 rtl:rotate-180" />
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {lang === "ar"
+                    ? "تصميم وتنفيذ نماذج التخرج، البرمجة، الدوائر المطبوعة (PCB)، والإشراف الأكاديمي والهندسي المتكامل."
+                    : "Prototype development, embedded systems, PCB schematics, and complete academic engineering supervision."}
+                </p>
+              </div>
+            </Link>
+
+            {/* 2. Smart Homes */}
+            <Link
+              to="/smart-homes"
+              hash="quote"
+              onClick={() => setServiceModalOpen(false)}
+              className="group relative flex items-start gap-4 rounded-2xl border border-gold/30 bg-surface/50 p-4 sm:p-5 transition-all hover:bg-surface hover:border-gold hover:shadow-gold cursor-pointer"
+            >
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gold/15 text-gold border border-gold/25 transition-transform group-hover:scale-105">
+                <Sparkles className="size-6" />
+              </div>
+              <div className="flex-1 min-w-0 text-start">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-sm sm:text-base text-foreground group-hover:text-gold transition-colors flex items-center gap-1.5">
+                    <span>{lang === "ar" ? "المنازل الذكية" : "Smart Homes"}</span>
+                  </h4>
+                  <span className="text-[11px] font-semibold text-gold opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline-flex items-center gap-1">
+                    {lang === "ar" ? "طلب المقايسة" : "Get Quote"}
+                    <ChevronRight className="size-3.5 rtl:rotate-180" />
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {lang === "ar"
+                    ? "طلب مقايسة واستشارة هندسية لتوريد وتركيب أجهزة الأتمتة الذكية للشقق، الفلل، والمباني الإدارية."
+                    : "Request turnkey engineering consultation and installation quote for smart residential and commercial automation."}
+                </p>
+              </div>
+            </Link>
+
+            {/* 3. Innovative Solutions */}
+            <Link
+              to="/request"
+              onClick={() => setServiceModalOpen(false)}
+              className="group relative flex items-start gap-4 rounded-2xl border border-blue-500/30 bg-surface/50 p-4 sm:p-5 transition-all hover:bg-surface hover:border-blue-500 hover:shadow-glow cursor-pointer"
+            >
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-blue-500/15 text-blue-400 border border-blue-500/25 transition-transform group-hover:scale-105">
+                <Cpu className="size-6" />
+              </div>
+              <div className="flex-1 min-w-0 text-start">
+                <div className="flex items-center justify-between gap-2">
+                  <h4 className="font-bold text-sm sm:text-base text-foreground group-hover:text-blue-400 transition-colors flex items-center gap-1.5">
+                    <span>{lang === "ar" ? "الحلول المبتكرة" : "Innovative Solutions"}</span>
+                  </h4>
+                  <span className="text-[11px] font-semibold text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:inline-flex items-center gap-1">
+                    {lang === "ar" ? "طلب المشروع" : "Start Project"}
+                    <ChevronRight className="size-3.5 rtl:rotate-180" />
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                  {lang === "ar"
+                    ? "طلب حلول تقنية وهندسية مخصصة للقطاعات الصناعية، الطاقة المتجددة، الزراعة، ومحطات المعالجة."
+                    : "Custom industrial automation, solar energy, smart agriculture, and IoT infrastructure proposals."}
+                </p>
+              </div>
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

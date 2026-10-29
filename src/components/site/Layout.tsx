@@ -47,7 +47,7 @@ const contactItems = [
     k: "about",
     icon: Info,
     descEn: "Company overview, our values, and Magdy Group history",
-    descAr: "نبذة عن الشركة، رؤيتنا وقيمنا، وتاريخ مجموعة مجدي",
+    descAr: "نبذة عن الشركة، رؤيتنا وقيمنا، وتاريخ مجدي جروب",
     color: "text-gold bg-gold/15",
   },
 ] as const;
@@ -364,9 +364,8 @@ export function Navbar() {
 
       {/* Mobile drawer */}
       <div
-        className={`overflow-hidden border-t transition-all duration-300 ease-in-out lg:hidden ${
-          open ? "max-h-[640px] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
-        }`}
+        className={`overflow-hidden border-t transition-all duration-300 ease-in-out lg:hidden ${open ? "max-h-[640px] opacity-100 overflow-y-auto" : "max-h-0 opacity-0"
+          }`}
       >
         <div className="px-4 pb-6 pt-3">
           {/* Nav links */}

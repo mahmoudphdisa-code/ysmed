@@ -932,7 +932,7 @@ export const smartHomeFaqs = [
     q: i18("Can YSMED design and install smart systems for villas, hotels, and offices?", "هل تقدم YSMED خدمات التصميم والتركيب المتكامل للفيلات والفنادق والشركات؟"),
     a: i18(
       "Yes. YSMED, as a member of Magdy Group, provides end-to-end engineering services: from electrical layout design and neutral wire infrastructure planning to device supply, physical installation, network optimization, and on-site user training with genuine warranty.",
-      "نعم. تقدم YSMED، كإحدى شركات مجموعة مجدي، خدمات هندسية متكاملة تشمل: المعاينة الهندسية وتصميم المخططات الكهربائية، توريد الأجهزة الأصلية، التركيب والبرمجة، ضبط شبكات التغطية، وتدريب العميل مع ضمان معتمد وخدمات ما بعد البيع."
+      "نعم. تقدم YSMED، كإحدى شركات مجدي جروب، خدمات هندسية متكاملة تشمل: المعاينة الهندسية وتصميم المخططات الكهربائية، توريد الأجهزة الأصلية، التركيب والبرمجة، ضبط شبكات التغطية، وتدريب العميل مع ضمان معتمد وخدمات ما بعد البيع."
     ),
   },
   {

@@ -87,6 +87,15 @@ export function Page() {
     wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Handle scroll to submit-request wizard if navigated with hash
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#submit-request") {
+      setTimeout(() => {
+        wizardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, []);
+
   // Fetch dynamic showcase from Supabase
   useEffect(() => {
     let active = true;
