@@ -162,7 +162,7 @@ export function SmartDemoShowroom() {
         <div className="glass max-w-5xl mx-auto rounded-3xl p-6 sm:p-8 border border-border/80 shadow-2xl relative overflow-hidden backdrop-blur-xl">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center text-start">
             {/* Visual Stage Window (7 COLS) */}
-            <div className="lg:col-span-7 relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border/60 bg-slate-950">
+            <div className="lg:col-span-7 relative aspect-[16/10] w-full overflow-hidden rounded-2xl border border-border/60 bg-surface">
               <img
                 src={current.image}
                 alt={current.titleEn}
@@ -176,7 +176,7 @@ export function SmartDemoShowroom() {
               />
 
               {/* Live Status Pill */}
-              <div className="absolute top-3 start-3 flex items-center gap-2 rounded-full bg-slate-950/80 backdrop-blur-md px-3 py-1 text-xs font-bold text-foreground border border-border/60">
+              <div className="absolute top-3 start-3 flex items-center gap-2 rounded-full bg-card/90 backdrop-blur-md px-3 py-1 text-xs font-bold text-foreground border border-border/60">
                 <span className="size-2 rounded-full bg-emerald-400 animate-ping" />
                 <span>{lang === "ar" ? current.titleAr : current.titleEn}</span>
               </div>

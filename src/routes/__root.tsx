@@ -12,6 +12,7 @@ import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { I18nProvider } from "../lib/i18n";
+import { ThemeProvider } from "../lib/theme";
 import { Navbar, Footer } from "../components/site/Layout";
 import { Splash } from "../components/site/Splash";
 import { Toaster } from "../components/ui/sonner";
@@ -102,9 +103,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("ysmed-theme");var d=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");document.documentElement.style.colorScheme="dark";document.documentElement.dataset.theme="dark";}else{document.documentElement.classList.add("light");document.documentElement.classList.remove("dark");document.documentElement.style.colorScheme="light";document.documentElement.dataset.theme="light";}}catch(e){}})();`,
+          }}
+        />
       </head>
       <body>
         {children}
@@ -120,13 +126,15 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <I18nProvider>
-        <Splash />
-        <Navbar />
-        <main className="min-h-screen"><Outlet /></main>
-        <Footer />
-        <Toaster />
-      </I18nProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <Splash />
+          <Navbar />
+          <main className="min-h-screen"><Outlet /></main>
+          <Footer />
+          <Toaster />
+        </I18nProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

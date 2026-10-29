@@ -124,7 +124,7 @@ function SmartHomesPage() {
         {/* Wishlist Pill */}
         <button
           onClick={() => setIsWishlistOpen(true)}
-          className="flex size-12 items-center justify-center rounded-full bg-slate-950/90 backdrop-blur-xl border border-border/80 text-foreground shadow-2xl hover:border-rose-500/50 hover:text-rose-400 transition-all active:scale-95 relative"
+          className="flex size-12 items-center justify-center rounded-full bg-card/95 backdrop-blur-xl border border-border/80 text-foreground shadow-2xl hover:border-rose-500/50 hover:text-rose-400 transition-all active:scale-95 relative"
           aria-label="Open Wishlist"
         >
           <Heart className="size-5" />

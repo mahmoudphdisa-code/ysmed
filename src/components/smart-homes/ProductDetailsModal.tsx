@@ -183,7 +183,7 @@ export function ProductDetailsModal({
                 className={`absolute top-3 end-3 flex size-9 items-center justify-center rounded-full backdrop-blur-md transition-all active:scale-90 ${
                   isFav
                     ? "bg-rose-500/20 text-rose-400 border border-rose-500/50"
-                    : "bg-slate-950/70 text-muted-foreground hover:text-white border border-border/60"
+                    : "bg-card/85 text-muted-foreground hover:text-foreground border border-border/60 hover:bg-card"
                 }`}
               >
                 <Heart className={`size-4.5 ${isFav ? "fill-rose-500 text-rose-500" : ""}`} />

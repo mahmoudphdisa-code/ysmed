@@ -219,6 +219,11 @@ const dict = {
   stockStatus: { en: "Stock Status", ar: "حالة التوفر بالمخزن" },
   inStock: { en: "In Stock", ar: "متوفر بالمخزن" },
   outOfStock: { en: "Out of Stock", ar: "غير متوفر" },
+  theme: { en: "Theme", ar: "المظهر" },
+  switchToLight: { en: "Switch to Light Mode", ar: "التبديل إلى الوضع الفاتح" },
+  switchToDark: { en: "Switch to Dark Mode", ar: "التبديل إلى الوضع الداكن" },
+  lightMode: { en: "Light Mode", ar: "الوضع الفاتح" },
+  darkMode: { en: "Dark Mode", ar: "الوضع الداكن" },
 } satisfies Record<string, L>;
 
 type Key = keyof typeof dict;

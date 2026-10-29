@@ -143,7 +143,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
 
         {/* Out of Stock Overlay */}
         {isOutOfStock && (
-          <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-[2px] flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] flex items-center justify-center">
             <span className="rounded-xl bg-destructive/90 text-white text-xs font-bold px-3 py-1 shadow-lg tracking-wide">
               {lang === "ar" ? "نفدت الكمية" : "Out of Stock"}
             </span>
@@ -166,7 +166,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         )}
 
         {/* Protocol Badge */}
-        <span className="absolute bottom-2.5 start-2.5 flex items-center gap-1 rounded-full bg-slate-950/80 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-primary border border-primary/30">
+        <span className="absolute bottom-2.5 start-2.5 flex items-center gap-1 rounded-full bg-card/90 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-primary border border-primary/30">
           {product.protocol === "Zigbee" ? <Radio className="size-3" /> : <Zap className="size-3" />}
           <span>{product.protocol}</span>
         </span>
@@ -181,7 +181,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
           className={`absolute top-2.5 end-2.5 flex size-8 items-center justify-center rounded-full backdrop-blur-md transition-all active:scale-90 ${
             isFav
               ? "bg-rose-500/20 text-rose-400 border border-rose-500/50"
-              : "bg-slate-950/60 text-muted-foreground hover:text-white border border-border/60 hover:bg-slate-950"
+              : "bg-card/85 text-muted-foreground hover:text-foreground border border-border/60 hover:bg-card"
           }`}
         >
           <Heart className={`size-4 ${isFav ? "fill-rose-500 text-rose-500" : ""}`} />
@@ -190,7 +190,7 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         {/* Quick View Button on Image Hover */}
         <button
           onClick={() => onQuickView(product, activePriceInfo.variant)}
-          className="absolute inset-x-4 bottom-3 hidden group-hover:flex items-center justify-center gap-1.5 rounded-xl bg-slate-950/85 backdrop-blur-md py-2 text-xs font-semibold text-foreground border border-border/60 shadow-lg hover:border-primary transition-all animate-rise"
+          className="absolute inset-x-4 bottom-3 hidden group-hover:flex items-center justify-center gap-1.5 rounded-xl bg-card/95 backdrop-blur-md py-2 text-xs font-semibold text-foreground border border-border/60 shadow-lg hover:border-primary transition-all animate-rise"
         >
           <Eye className="size-3.5 text-primary" />
           <span>{lang === "ar" ? "نظرة سريعة" : "Quick View"}</span>

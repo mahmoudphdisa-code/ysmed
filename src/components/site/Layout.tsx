@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { Menu, X, Globe, ChevronRight, ChevronDown, User, Sparkles, GraduationCap, Cpu, Phone, Info } from "lucide-react";
 import logo from "@/assets/ysmed-logo.png";
 import { useI18n } from "@/lib/i18n";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -341,6 +342,7 @@ export function Navbar() {
 
         {/* Desktop actions */}
         <div className="hidden items-center gap-2 lg:flex">
+          <ThemeToggle />
           <LangSwitch />
           <Link
             to={hasSession ? "/account" : "/auth"}
@@ -480,7 +482,10 @@ export function Navbar() {
           {/* Bottom actions */}
           <div className="mt-4 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <LangSwitch />
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <LangSwitch />
+              </div>
               <Link
                 to={hasSession ? "/account" : "/auth"}
                 onClick={close}

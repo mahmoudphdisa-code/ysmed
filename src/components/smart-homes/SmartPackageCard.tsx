@@ -78,13 +78,13 @@ export function SmartPackageCard({
           />
 
           {/* Rooms Badge */}
-          <span className="absolute top-2.5 start-2.5 flex items-center gap-1.5 rounded-full bg-slate-950/80 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-foreground border border-border/60">
+          <span className="absolute top-2.5 start-2.5 flex items-center gap-1.5 rounded-full bg-card/90 backdrop-blur-md px-3 py-1 text-[11px] font-bold text-foreground border border-border/60">
             <Building className="size-3 text-primary" />
             <span>{tl(pkg.propertyType)}</span>
           </span>
 
           {/* Protocol Badge */}
-          <span className="absolute bottom-2.5 start-2.5 rounded-full bg-slate-950/80 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-primary border border-primary/30">
+          <span className="absolute bottom-2.5 start-2.5 rounded-full bg-card/90 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-bold text-primary border border-primary/30">
             {pkg.systemType}
           </span>
 

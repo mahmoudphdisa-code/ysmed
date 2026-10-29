@@ -214,7 +214,7 @@ export function SmartHero() {
               </div>
 
               {/* Virtual Room Graphic Preview with Dynamic Ambient Illumination */}
-              <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-border/60 bg-slate-950 transition-all duration-500">
+              <div className="relative mt-4 aspect-video w-full overflow-hidden rounded-2xl border border-border/60 bg-surface transition-all duration-500">
                 <img
                   src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1000&q=80"
                   alt="Modern Luxury Smart Living Room"
